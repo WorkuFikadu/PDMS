@@ -3,7 +3,7 @@ import React from 'react';
 import {
   Users, Activity, FileText, Share2, Pill, FlaskConical,
   ShieldAlert, BarChart3, Globe, Building2, UserCheck, Shield,
-  KeyRound, Hospital, Bed
+  KeyRound, Hospital, Bed, Calendar, Baby
 } from 'lucide-react';
 
 export default function Header({
@@ -168,6 +168,22 @@ export default function Header({
         >
           <Share2 className="w-4 h-4" />
           {t.navReferrals}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('appointments')}
+          className={`flex items-center gap-2 py-3 px-3.5 border-b-2 transition whitespace-nowrap ${activeTab === 'appointments' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-900 hover:border-slate-300'}`}
+        >
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          {t.navAppointments}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('maternal-child')}
+          className={`flex items-center gap-2 py-3 px-3.5 border-b-2 transition whitespace-nowrap ${activeTab === 'maternal-child' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-900 hover:border-slate-300'}`}
+        >
+          <Baby className="w-4 h-4 text-pink-500" />
+          {t.navMaternalChild}
         </button>
 
         <button

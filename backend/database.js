@@ -299,6 +299,58 @@ function initDatabase() {
       FOREIGN KEY (patient_id) REFERENCES patients(id),
       FOREIGN KEY (authorized_facility_id) REFERENCES facilities(id)
     );
+
+    -- VACCINATIONS & IMMUNIZATION (EPI Schedule: BCG, Pentavalent, PCV, Rota, Measles)
+    CREATE TABLE IF NOT EXISTS vaccinations (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      vaccine_name TEXT NOT NULL,
+      dose_number INTEGER NOT NULL,
+      date_given TEXT NOT NULL,
+      facility_id TEXT NOT NULL,
+      administered_by TEXT NOT NULL,
+      batch_number TEXT,
+      next_due_date TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id),
+      FOREIGN KEY (facility_id) REFERENCES facilities(id)
+    );
+
+    -- MATERNAL HEALTH & ANTENATAL CARE (ANC 1-4)
+    CREATE TABLE IF NOT EXISTS maternal_records (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      visit_number TEXT NOT NULL,                 -- ANC 1, ANC 2, ANC 3, ANC 4, Postnatal
+      gestational_age_weeks INTEGER NOT NULL,
+      fundal_height_cm REAL,
+      fetal_heart_rate_bpm INTEGER,
+      blood_pressure TEXT,
+      weight_kg REAL,
+      tetanus_toxoid_status TEXT DEFAULT 'GIVEN',
+      iron_folate_given INTEGER DEFAULT 1,
+      hiv_test_result TEXT DEFAULT 'NON_REACTIVE',
+      vdrl_test_result TEXT DEFAULT 'NON_REACTIVE',
+      notes TEXT,
+      facility_id TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      recorded_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id),
+      FOREIGN KEY (facility_id) REFERENCES facilities(id),
+      FOREIGN KEY (provider_id) REFERENCES users(id)
+    );
+
+    -- SIMULATED ETHIO TELECOM SMS NOTIFICATIONS & APPOINTMENT REMINDERS
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      phone_number TEXT NOT NULL,
+      message_type TEXT NOT NULL,                 -- APPOINTMENT_REMINDER, OTP_AUTH, REFERRAL_UPDATE, LAB_RESULT
+      message_text TEXT NOT NULL,
+      language TEXT DEFAULT 'en',                 -- en, om, am
+      status TEXT DEFAULT 'DELIVERED',
+      sent_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id)
+    );
   `);
   console.log('NPDMS Database schema initialized successfully.');
 }

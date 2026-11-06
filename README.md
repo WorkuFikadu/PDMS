@@ -23,26 +23,29 @@ The **National Patient Data Management System (NPDMS)** solves these challenges 
 ## 2. System Architecture & Tech Stack
 
 ```
-   ┌───────────────────────────────────────────────────────────────┐
-   │         Trilingual Client Interface (EN / OM / AM)            │
-   │  React 19 + Vite 8 + Tailwind CSS v4 + Lucide Clinical Icons   │
-   └───────────────┬───────────────────────────────┬───────────────┘
-                   │                               │
-                   ▼                               ▼
-   ┌───────────────────────────────────────────────────────────────┐
-   │              NPDMS REST & Interoperability Gateway            │
-   │      Node.js 24 + Express + Native SQLite (Zero-Config)       │
-   ├───────────────────────────────┬───────────────────────────────┤
-   │ • Patient Identity & Matching │ • Longitudinal EHR Timeline   │
-   │ • Fayda National ID Simulator │ • Clinical Allergy CDS Alerts │
-   │ • Inter-Hospital Referrals    │ • Emergency Break-Glass Hub   │
-   │ • Pharmacy & Dispensation     │ • HL7 FHIR R4 JSON Exporter   │
-   └───────────────────────────────┴───────────────────────────────┘
+   ┌────────────────────────────────────────────────────────────────────────┐
+   │              Trilingual Client Interface (EN / OM / AM)                │
+   │  React 19 + Vite 8 + Tailwind CSS v4 + Lucide Clinical Icons + QR Code │
+   └───────────────┬────────────────────────────────────────┬───────────────┘
+                   │                                        │
+                   ▼                                        ▼
+   ┌────────────────────────────────────────────────────────────────────────┐
+   │                 NPDMS REST & Interoperability Gateway                  │
+   │       Node.js 24 + Express + Native node:sqlite (Zero-Config)          │
+   ├────────────────────────────────────────┬───────────────────────────────┤
+   │ • Patient Identity & Fayda Verification│ • Longitudinal Cross-EHR      │
+   │ • 5-Min OTP Cross-Hospital Gateway     │ • AI Clinical Copilot (EN/OM) │
+   │ • Digital Health Card with QR Code     │ • Ambulance Transfer Brief    │
+   │ • Child Immunization (EPI) & ANC 1-4   │ • Offline-First Batch Sync    │
+   │ • Operations & Surgical History        │ • Inpatient Bed Admissions    │
+   │ • Clinical Allergy CDS Alerts          │ • Emergency Break-Glass Hub   │
+   │ • Appointments & Ethio Telecom SMS     │ • HL7 FHIR R4 JSON Exporter   │
+   └────────────────────────────────────────┴───────────────────────────────┘
 ```
 
-- **Frontend:** React 19, Vite 8, Tailwind CSS v4, Lucide React, Trilingual localization (English, Afaan Oromoo, Amharic).
-- **Backend:** Node.js v24 with built-in native `node:sqlite` (SQLite 3.51 with WAL mode, zero native compilation required).
-- **Standards:** HL7 FHIR R4 interoperability schemas, ICD-10 clinical coding, WCAG AA accessibility, Ethiopian Personal Data Protection principles.
+- **Frontend:** React 19, Vite 8, Tailwind CSS v4, Lucide React, Canvas-Confetti, QRCode generator, Trilingual localization (English, Afaan Oromoo, Amharic).
+- **Backend:** Node.js v24 with built-in native `node:sqlite` (`DatabaseSync` with WAL mode, zero native compilation required).
+- **Standards:** HL7 FHIR R4 interoperability schemas, ICD-10 clinical coding, WCAG AA accessibility, Ethiopian Personal Data Protection principles, Ethio Telecom SMS gateway simulation.
 
 ---
 
@@ -114,6 +117,57 @@ The **National Patient Data Management System (NPDMS)** solves these challenges 
 ### Scenario 8: HL7 FHIR R4 Interoperability Export
 1. In the patient chart, click **"Export HL7 FHIR Bundle"**.
 2. Inspect the generated FHIR R4 JSON Bundle including standard `Patient`, `Condition`, `MedicationRequest`, and `AllergyIntolerance` resources.
+
+### Scenario 9: Cross-Hospital Record Sharing via OTP Authorization (CORE FEATURE)
+1. Navigate to **Cross-Hospital Access (OTP)** tab.
+2. Select or search for **Kemal Mohammed** (`PAT-001`) who previously received treatment at **Agaro Primary Hospital** and **Jimma University Medical Center (JUMC)**.
+3. Switch the active facility to **Tikur Anbessa Specialized Hospital** in Addis Ababa.
+4. Click **"Request Access & Send OTP"**:
+   - The system triggers an Ethio Telecom SMS dispatch simulation to the patient's verified phone (`+251-91-765-4321`).
+   - A 5-minute security countdown begins (`05:00`).
+   - The test OTP passcode appears in the live simulator banner (e.g. `834921`).
+5. Enter the 6-digit PIN in the interactive OTP input cells.
+6. The system verifies single-use non-replayability, creates an access consent grant (`60-minute unlocked session token`), triggers celebratory confetti, and renders the cross-hospital medical history.
+7. Test brute-force protection: entering incorrect codes 3 times locks the request.
+
+### Scenario 10: AI Clinical Copilot & Longitudinal Summarizer (Trilingual)
+1. Open any patient's full EHR and click the **"AI Copilot"** button.
+2. Select between **English**, **Afaan Oromoo**, or **አማርኛ**.
+3. The AI engine instantly synthesizes the longitudinal medical history across all visiting facilities:
+   - **Executive Digest:** Concise narrative of chronic conditions and facility transitions.
+   - **Critical Allergy Alerts:** Red-flagged allergy warnings with contraindications.
+   - **Active Medication Regimen:** Current doses, frequencies, and facilities.
+   - **Lab Insights:** Flagged abnormal lab values (HbA1c, fasting glucose, renal markers).
+   - **Recommended Care Plan:** Evidence-based follow-up according to Ethiopian MOH clinical guidelines.
+
+### Scenario 11: National Digital Patient Health Card with QR Code
+1. In the patient EHR, click **"Health Card"**.
+2. An official Ethiopian National Health Card is rendered with Ministry of Health branding, Fayda FIN link, blood type, emergency contact, and documented allergies.
+3. The scannable QR code encodes encrypted JSON payload containing `NPDMS_ID`, `FAYDA_FIN`, demographics, and emergency medical tags for rapid triage.
+4. Click **"Print Card"** to produce a wallet-sized laminated printout.
+
+### Scenario 12: Inter-Hospital Clinical Transfer Brief (Ambulance / Referral)
+1. In the patient EHR, click **"Transfer Brief"**.
+2. A formal inter-facility clinical summary is generated formatted with official header, referring facility, receiving facility, vital signs, active diagnoses, active medications, and primary physician signature lines.
+3. Clinicians can print directly (`Ctrl+P` / Print button) for ambulance transport or referral handover.
+
+### Scenario 13: Child Immunization (EPI) & Maternal Health (ANC 1–4)
+1. Navigate to **Maternal & Child (ANC/EPI)** tab.
+2. Under **Antenatal Care (ANC 1–4)**, review gestational age, fundal height, fetal heart rate, tetanus toxoid status, iron folate, and rapid serology (HIV, VDRL/Syphilis) for patient *Chaltu Desta*. Click **"Record ANC Visit"** to document visit progress.
+3. Under **Child Immunization (EPI)**, review patient *Hawi Gudeta* against the official Ethiopian National Immunization Schedule (BCG, OPV-0, Pentavalent 1-3, PCV 1-3, Rotavirus, Measles Rubella MR-1 & MR-2). Click **"Record Vaccination"** to record new doses with vaccine batch numbers.
+
+### Scenario 14: Appointments & Ethio Telecom SMS Notification Dispatcher
+1. Navigate to **Appointments & SMS** tab.
+2. View scheduled outpatient follow-ups with hospital departments.
+3. Click **"Schedule Appointment & Dispatch SMS"** to book an appointment with automatic SMS reminder dispatched in the patient's preferred language (EN/OM/AM) through shortcode `8282`.
+4. Review the real-time notification delivery log.
+
+### Scenario 15: Offline-First Mode & Sync Queue Simulator
+1. In the top notification banner, observe the **Offline Sync Bar**.
+2. Click **"Work Offline"** to simulate network failure or rural clinic power disruption.
+3. Click **"Record Offline Consultation"** to document an outpatient encounter saved directly to client-side `localStorage`.
+4. The queue badge increments (e.g. `1 pending sync`).
+5. Click **"Sync Now (Reconnected)"**: the batch sync payload is posted to `/api/sync/batch`, written into the central database, and logged in the immutable audit trail.
 
 ---
 

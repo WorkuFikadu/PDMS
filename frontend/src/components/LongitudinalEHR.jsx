@@ -4,8 +4,11 @@ import {
   Activity, AlertTriangle, ShieldAlert, FileText, PlusCircle,
   Building2, Calendar, User, Pill, FlaskConical, Stethoscope,
   Heart, Download, ShieldCheck, CheckCircle2, ChevronRight,
-  Clock, AlertOctagon, ArrowRightCircle, Sparkles, X
+  Clock, AlertOctagon, ArrowRightCircle, Sparkles, X, QrCode, Printer
 } from 'lucide-react';
+import AiCopilotModal from './AiCopilotModal';
+import DigitalHealthCardModal from './DigitalHealthCardModal';
+import ClinicalTransferBriefModal from './ClinicalTransferBriefModal';
 
 export default function LongitudinalEHR({
   patientId, currentFacility, currentUser, onRefresh, t
@@ -14,10 +17,13 @@ export default function LongitudinalEHR({
   const [encounters, setEncounters] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Encounter creation modal
+  // Modal States
   const [showEncounterModal, setShowEncounterModal] = useState(false);
   const [showBreakGlassModal, setShowBreakGlassModal] = useState(false);
   const [showFhirModal, setShowFhirModal] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [showBriefModal, setShowBriefModal] = useState(false);
   const [fhirData, setFhirData] = useState(null);
 
   // New Encounter Form
@@ -303,8 +309,35 @@ export default function LongitudinalEHR({
             )}
           </div>
 
-          {/* Action Buttons: Consult, Break-Glass, FHIR */}
+          {/* Action Buttons: Consult, AI Copilot, Health Card, Transfer Brief, Break-Glass, FHIR */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowAiModal(true)}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl text-xs shadow-xs transition"
+              title="Generate trilingual AI longitudinal clinical summary"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>AI Copilot</span>
+            </button>
+
+            <button
+              onClick={() => setShowCardModal(true)}
+              className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold rounded-xl text-xs transition"
+              title="View and print National Digital Health Card with QR code"
+            >
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span>Health Card</span>
+            </button>
+
+            <button
+              onClick={() => setShowBriefModal(true)}
+              className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-semibold rounded-xl text-xs transition"
+              title="Print inter-hospital transfer brief for ambulance or referral"
+            >
+              <Printer className="w-4 h-4 text-amber-600" />
+              <span>Transfer Brief</span>
+            </button>
+
             <button
               onClick={() => setShowEncounterModal(true)}
               className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs shadow-xs transition"
@@ -877,6 +910,36 @@ export default function LongitudinalEHR({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 7. AI CLINICAL COPILOT MODAL */}
+      {showAiModal && patientData && (
+        <AiCopilotModal
+          patientId={patientId}
+          patientName={patientData.full_name}
+          currentFacility={currentFacility}
+          currentUser={currentUser}
+          onClose={() => setShowAiModal(false)}
+        />
+      )}
+
+      {/* 8. DIGITAL HEALTH CARD MODAL */}
+      {showCardModal && patientData && (
+        <DigitalHealthCardModal
+          patient={patientData}
+          onClose={() => setShowCardModal(false)}
+        />
+      )}
+
+      {/* 9. CLINICAL TRANSFER BRIEF MODAL */}
+      {showBriefModal && patientData && (
+        <ClinicalTransferBriefModal
+          patient={patientData}
+          encounters={encounters}
+          currentFacility={currentFacility}
+          currentUser={currentUser}
+          onClose={() => setShowBriefModal(false)}
+        />
       )}
     </div>
   );

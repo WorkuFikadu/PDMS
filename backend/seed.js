@@ -9,6 +9,9 @@ function seedDatabase() {
   db.exec('PRAGMA foreign_keys = OFF;');
 
   db.exec(`
+    DELETE FROM notifications;
+    DELETE FROM maternal_records;
+    DELETE FROM vaccinations;
     DELETE FROM record_access_consents;
     DELETE FROM otp_requests;
     DELETE FROM appointments;
@@ -387,6 +390,75 @@ function seedDatabase() {
   ];
 
   appointments.forEach(ap => insertAppointment.run(...ap));
+
+  console.log('Seeding childhood vaccinations (EPI schedule)...');
+  const insertVac = db.prepare(`
+    INSERT INTO vaccinations (id, patient_id, vaccine_name, dose_number, date_given, facility_id, administered_by, batch_number, next_due_date, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `);
+
+  const vaccinations = [
+    // Hawi Gudeta (Child without National ID - 3 years old)
+    ['VAC-001', 'PAT-004', 'BCG (Tuberculosis)', 1, '2023-03-15', 'FAC-JUMC', 'Sr. Fatuma Kedir', 'ETH-BCG-8812', null],
+    ['VAC-002', 'PAT-004', 'Oral Polio Vaccine (OPV-0)', 1, '2023-03-15', 'FAC-JUMC', 'Sr. Fatuma Kedir', 'ETH-OPV-0012', '2023-04-26'],
+    ['VAC-003', 'PAT-004', 'Pentavalent (DTP-HepB-Hib)', 1, '2023-04-28', 'FAC-JUMC', 'Sr. Fatuma Kedir', 'ETH-PNT-9921', '2023-05-28'],
+    ['VAC-004', 'PAT-004', 'Pneumococcal Conjugate Vaccine (PCV-1)', 1, '2023-04-28', 'FAC-JUMC', 'Sr. Fatuma Kedir', 'ETH-PCV-4412', '2023-05-28'],
+    ['VAC-005', 'PAT-004', 'Rotavirus Vaccine (Rota-1)', 1, '2023-04-28', 'FAC-JUMC', 'Sr. Fatuma Kedir', 'ETH-ROT-1192', '2023-05-28'],
+    ['VAC-006', 'PAT-004', 'Measles Rubella (MR-1)', 1, '2023-12-18', 'FAC-JUMC', 'Sr. Fatuma Kedir', 'ETH-MSL-3310', null]
+  ];
+
+  vaccinations.forEach(v => insertVac.run(...v));
+
+  console.log('Seeding maternal antenatal care (ANC)...');
+  const insertMat = db.prepare(`
+    INSERT INTO maternal_records (
+      id, patient_id, visit_number, gestational_age_weeks, fundal_height_cm,
+      fetal_heart_rate_bpm, blood_pressure, weight_kg, tetanus_toxoid_status,
+      iron_folate_given, hiv_test_result, vdrl_test_result, notes, facility_id, provider_id, recorded_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `);
+
+  const maternal = [
+    // Chaltu Desta ANC trajectory at Shenen Gibe
+    [
+      'ANC-001', 'PAT-002', 'ANC Visit 1', 12, 12.0, 150, '110/70', 58.0,
+      'GIVEN', 1, 'NON_REACTIVE', 'NON_REACTIVE', 'First trimester routine booking; ultrasound confirms viable intrauterine pregnancy.',
+      'FAC-SHENEN', 'USR-DOC-02'
+    ],
+    [
+      'ANC-002', 'PAT-002', 'ANC Visit 2', 20, 20.0, 144, '112/68', 60.5,
+      'UP_TO_DATE', 1, 'NON_REACTIVE', 'NON_REACTIVE', 'Second trimester screening. Fetal anatomy normal, quickening felt, normal maternal vitals.',
+      'FAC-SHENEN', 'USR-DOC-02'
+    ],
+    [
+      'ANC-003', 'PAT-002', 'ANC Visit 3', 32, 32.0, 140, '112/70', 64.0,
+      'UP_TO_DATE', 1, 'NON_REACTIVE', 'NON_REACTIVE', 'Third trimester visit. Cephalic presentation, good fetal movements, birth preparedness counseling provided.',
+      'FAC-SHENEN', 'USR-DOC-02'
+    ]
+  ];
+
+  maternal.forEach(m => insertMat.run(...m));
+
+  console.log('Seeding simulated Ethio Telecom SMS notifications...');
+  const insertSms = db.prepare(`
+    INSERT INTO notifications (id, patient_id, phone_number, message_type, message_text, language, status, sent_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'DELIVERED', datetime('now'))
+  `);
+
+  const sms = [
+    [
+      'SMS-001', 'PAT-001', '+251-91-765-4321', 'APPOINTMENT_REMINDER',
+      'NPDMS Ethiopia: Kabajamoo Kemal, beellamni yaala onnee Hospitaala JUMC Sadaasa 18 sa\'aatii 09:30 AM irratti qabameera. Maaloo qoricha keessan qabattanii koottaa.',
+      'om'
+    ],
+    [
+      'SMS-002', 'PAT-002', '+251-93-112-2334', 'APPOINTMENT_REMINDER',
+      'NPDMS Ethiopia: የተከበሩ ጫልቱ ደስታ፣ የ34 ሳምንት የእርግዝና ክትትል ቀጠሮዎ በሸነን ጊቤ ሆስፒታል ህዳር 16 ቀን 10:00 AM ተይዟል።',
+      'am'
+    ]
+  ];
+
+  sms.forEach(s => insertSms.run(...s));
 
   console.log('Seeding cross-facility referrals...');
   const insertReferral = db.prepare(`

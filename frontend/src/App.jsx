@@ -13,6 +13,9 @@ import DuplicateQueue from './components/DuplicateQueue';
 import AuditTrail from './components/AuditTrail';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import PatientPortal from './components/PatientPortal';
+import AppointmentsModule from './components/AppointmentsModule';
+import MaternalChildModule from './components/MaternalChildModule';
+import OfflineSyncBar from './components/OfflineSyncBar';
 import { translations } from './i18n';
 
 export default function App() {
@@ -103,6 +106,13 @@ export default function App() {
         users={users}
       />
 
+      {/* Offline Sync Bar & Simulator */}
+      <OfflineSyncBar
+        currentFacility={currentFacility}
+        currentUser={currentUser}
+        onSyncComplete={handleRefreshPatients}
+      />
+
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         {loading ? (
@@ -162,6 +172,24 @@ export default function App() {
 
             {activeTab === 'referrals' && (
               <ReferralsHub
+                currentFacility={currentFacility}
+                currentUser={currentUser}
+                patients={patients}
+                t={t}
+              />
+            )}
+
+            {activeTab === 'appointments' && (
+              <AppointmentsModule
+                currentFacility={currentFacility}
+                currentUser={currentUser}
+                patients={patients}
+                t={t}
+              />
+            )}
+
+            {activeTab === 'maternal-child' && (
+              <MaternalChildModule
                 currentFacility={currentFacility}
                 currentUser={currentUser}
                 patients={patients}
