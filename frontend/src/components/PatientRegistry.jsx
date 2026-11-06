@@ -146,6 +146,51 @@ export default function PatientRegistry({
 
   return (
     <div className="space-y-6">
+      {/* NATIONAL FAYDA CORE PILLAR BANNER */}
+      <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 text-white rounded-2xl p-5 border border-sky-800/50 shadow-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                CORE SYSTEM ARCHITECTURE
+              </span>
+              <span className="text-xs text-sky-300 font-semibold">
+                FDRE Ministry of Health • Jimma University
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
+              One Patient • One Fayda Identity • Treated Anywhere, Stored in One Record
+            </h2>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              When a patient visits a primary clinic in Agaro, is referred to Jimma University Medical Center (JUMC), or undergoes surgery at Tikur Anbessa in Addis Ababa, all clinical histories, life-threatening allergies, and prescriptions are synchronized into a single, permanent longitudinal record anchored by their verified Ethiopian National Digital ID (Fayda).
+            </p>
+          </div>
+
+          {/* Quick Demo Test Fayda Pills */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 space-y-2 text-xs min-w-[260px]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Quick Search by Fayda National ID:
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => setSearchTerm('1985-7821-4923')}
+                className="text-left px-2.5 py-1.5 bg-slate-900/90 hover:bg-sky-900/60 text-sky-200 rounded-lg text-xs font-mono font-bold transition flex items-center justify-between"
+              >
+                <span>1985-7821-4923</span>
+                <span className="text-[10px] text-slate-400 font-sans font-normal">Kemal (2 Hospitals)</span>
+              </button>
+              <button
+                onClick={() => setSearchTerm('2001-9984-5512')}
+                className="text-left px-2.5 py-1.5 bg-slate-900/90 hover:bg-sky-900/60 text-sky-200 rounded-lg text-xs font-mono font-bold transition flex items-center justify-between"
+              >
+                <span>2001-9984-5512</span>
+                <span className="text-[10px] text-slate-400 font-sans font-normal">Chaltu (ANC / Surgery)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Top Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         {/* Search */}

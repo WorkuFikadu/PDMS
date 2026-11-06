@@ -384,6 +384,99 @@ export default function LongitudinalEHR({
         )}
       </div>
 
+      {/* 2B. NATIONAL FAYDA CROSS-HOSPITAL CARE TRAIL */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 border border-indigo-800/60 shadow-md space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-800/40 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 font-bold shadow-xs">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-sm tracking-wide text-white">
+                  National Cross-Hospital Care Journey
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                  Fayda Anchored
+                </span>
+              </div>
+              <p className="text-xs text-slate-300">
+                Core Principle: <strong className="text-emerald-300">"Treated Everywhere in Ethiopia — Stored in One Master Record"</strong> via Fayda FIN: <span className="font-mono text-amber-300 font-bold">{patientData.fayda_fin || 'Provisional NPDMS ID'}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-3 py-1 bg-slate-800/80 border border-slate-700 rounded-lg text-slate-300 font-medium">
+              <strong className="text-sky-400 font-bold">{[...new Set(encounters.map(e => e.facility_name))].length}</strong> Facilities Involved
+            </span>
+            <span className="px-3 py-1 bg-slate-800/80 border border-slate-700 rounded-lg text-slate-300 font-medium">
+              <strong className="text-emerald-400 font-bold">{encounters.length}</strong> Encounters Linked
+            </span>
+          </div>
+        </div>
+
+        {/* Visual Hospital Pathway */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          {/* List of distinct hospitals where patient was treated */}
+          {[...new Set(encounters.map(e => e.facility_name))].map((facName, idx) => {
+            const facEncounters = encounters.filter(e => e.facility_name === facName);
+            const latestVisit = facEncounters[0];
+            return (
+              <div
+                key={facName}
+                className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-3.5 space-y-2 relative overflow-hidden"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800/60">
+                    Hospital #{idx + 1}
+                  </span>
+                  <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Synchronized
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-white truncate">{facName}</h4>
+                  <p className="text-[11px] text-slate-400">
+                    {facEncounters.length} consultation{facEncounters.length > 1 ? 's' : ''} • Last: {latestVisit.started_at?.slice(0, 10)}
+                  </p>
+                </div>
+                <div className="text-[10px] text-slate-400 border-t border-slate-700/60 pt-2 flex items-center justify-between">
+                  <span>Treating Doctor:</span>
+                  <span className="text-slate-200 font-medium truncate ml-1">{latestVisit.provider_name}</span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Current Facility Active Integration Card */}
+          <div className="bg-sky-950/40 border border-sky-600/40 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-amber-400 text-slate-950">
+                  Active Now
+                </span>
+                <span className="text-[10px] text-sky-300 font-bold">Current Session</span>
+              </div>
+              <h4 className="font-bold text-xs text-sky-200 mt-2 truncate">
+                {currentFacility?.name || 'Local Hospital'}
+              </h4>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                New diagnoses, surgeries, or prescriptions recorded today will seamlessly persist into this same national Fayda record.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowEncounterModal(true)}
+              className="w-full py-1.5 px-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Add New Treatment Here</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 3. LONGITUDINAL CROSS-FACILITY TIMELINE */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
