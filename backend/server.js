@@ -829,6 +829,253 @@ app.post('/api/referrals/:id/respond', (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 8B. SURGICAL & OPERATION MANAGEMENT MODULE
+// -------------------------------------------------------------
+app.get('/api/procedures', (req, res) => {
+  const { patient_id } = req.query;
+  let sql = `
+    SELECT pr.*, p.first_name, p.father_name, p.npdms_id, f.name as facility_name, f.code as facility_code, u.full_name as surgeon_name
+    FROM procedures pr
+    JOIN patients p ON pr.patient_id = p.id
+    JOIN facilities f ON pr.facility_id = f.id
+    JOIN users u ON pr.surgeon_id = u.id
+  `;
+  const params = [];
+  if (patient_id) {
+    sql += ' WHERE pr.patient_id = ?';
+    params.push(patient_id);
+  }
+  sql += ' ORDER BY pr.performed_at DESC';
+  const list = db.prepare(sql).all(...params);
+  res.json(list);
+});
+
+app.post('/api/procedures', (req, res) => {
+  const {
+    patient_id, facility_id, surgeon_id, procedure_name, indication,
+    surgical_team, anesthesia_type, operative_notes, outcome, complications,
+    post_op_treatment, recovery_progress, future_recommendations,
+    user_name, user_role
+  } = req.body;
+
+  if (!patient_id || !procedure_name || !indication) {
+    return res.status(400).json({ error: 'Patient ID, procedure name, and indication are mandatory.' });
+  }
+
+  const procId = 'PROC-' + crypto.randomUUID().slice(0, 6).toUpperCase();
+
+  db.prepare(`
+    INSERT INTO procedures (
+      id, patient_id, facility_id, surgeon_id, procedure_name, indication,
+      surgical_team, anesthesia_type, operative_notes, outcome, complications,
+      post_op_treatment, recovery_progress, future_recommendations, performed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `).run(
+    procId,
+    patient_id,
+    facility_id || 'FAC-JUMC',
+    surgeon_id || 'USR-DOC-01',
+    procedure_name,
+    indication,
+    surgical_team || 'Surgical Team JUMC',
+    anesthesia_type || 'GENERAL',
+    operative_notes || '',
+    outcome || 'SUCCESSFUL',
+    complications || 'None reported',
+    post_op_treatment || '',
+    recovery_progress || 'Stable recovery',
+    future_recommendations || 'Routine wound inspection in 7 days'
+  );
+
+  recordAudit(
+    surgeon_id,
+    user_name || 'Surgeon',
+    user_role || 'DOCTOR',
+    facility_id,
+    patient_id,
+    'CREATE_PROCEDURE',
+    'SURGICAL_RECORD',
+    `Documented surgical operation: ${procedure_name} (${outcome})`
+  );
+
+  res.status(201).json({ success: true, procedure_id: procId, message: 'Surgical record documented successfully.' });
+});
+
+// -------------------------------------------------------------
+// 8C. INPATIENT ADMISSIONS & DISCHARGE MANAGEMENT MODULE
+// -------------------------------------------------------------
+app.get('/api/admissions', (req, res) => {
+  const { status, patient_id } = req.query;
+  let sql = `
+    SELECT a.*, p.first_name, p.father_name, p.npdms_id, p.date_of_birth, p.gender,
+      f.name as facility_name, f.code as facility_code, u.full_name as doctor_name
+    FROM admissions a
+    JOIN patients p ON a.patient_id = p.id
+    JOIN facilities f ON a.facility_id = f.id
+    JOIN users u ON a.admitting_doctor_id = u.id
+  `;
+  const params = [];
+  const conditions = [];
+
+  if (status) {
+    conditions.push('a.status = ?');
+    params.push(status);
+  }
+  if (patient_id) {
+    conditions.push('a.patient_id = ?');
+    params.push(patient_id);
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  sql += ' ORDER BY a.admitted_at DESC';
+  const list = db.prepare(sql).all(...params);
+  res.json(list);
+});
+
+app.post('/api/admissions', (req, res) => {
+  const {
+    patient_id, facility_id, admitting_doctor_id, ward_name, bed_number, admission_reason,
+    user_name, user_role
+  } = req.body;
+
+  if (!patient_id || !ward_name || !bed_number || !admission_reason) {
+    return res.status(400).json({ error: 'Patient ID, ward, bed number, and reason are required.' });
+  }
+
+  const admId = 'ADM-' + crypto.randomUUID().slice(0, 6).toUpperCase();
+
+  db.prepare(`
+    INSERT INTO admissions (
+      id, patient_id, facility_id, admitting_doctor_id, ward_name, bed_number,
+      admission_reason, status, admitted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ADMITTED', datetime('now'))
+  `).run(
+    admId,
+    patient_id,
+    facility_id || 'FAC-JUMC',
+    admitting_doctor_id || 'USR-DOC-01',
+    ward_name,
+    bed_number,
+    admission_reason
+  );
+
+  recordAudit(
+    admitting_doctor_id,
+    user_name || 'Admitting Clinician',
+    user_role || 'DOCTOR',
+    facility_id,
+    patient_id,
+    'CREATE_ADMISSION',
+    'INPATIENT_ADMISSION',
+    `Admitted patient to ${ward_name}, Bed ${bed_number}. Indication: ${admission_reason}`
+  );
+
+  res.status(201).json({ success: true, admission_id: admId, message: 'Patient admitted successfully.' });
+});
+
+app.post('/api/admissions/:id/discharge', (req, res) => {
+  const { discharge_summary, post_discharge_instructions, condition_on_discharge, user_id, user_name, user_role, facility_id } = req.body;
+  const adm = db.prepare('SELECT * FROM admissions WHERE id = ?').get(req.params.id);
+
+  if (!adm) {
+    return res.status(404).json({ error: 'Admission record not found' });
+  }
+
+  db.prepare(`
+    UPDATE admissions
+    SET status = 'DISCHARGED', discharge_date = datetime('now'),
+        discharge_summary = ?, post_discharge_instructions = ?, condition_on_discharge = ?
+    WHERE id = ?
+  `).run(
+    discharge_summary || 'Discharged in stable condition',
+    post_discharge_instructions || 'Routine outpatient follow-up',
+    condition_on_discharge || 'IMPROVED',
+    req.params.id
+  );
+
+  recordAudit(
+    user_id,
+    user_name,
+    user_role,
+    facility_id,
+    adm.patient_id,
+    'DISCHARGE_PATIENT',
+    'INPATIENT_DISCHARGE',
+    `Discharged from ${adm.ward_name}. Condition: ${condition_on_discharge || 'IMPROVED'}`
+  );
+
+  res.json({ success: true, message: 'Patient discharged and discharge summary archived to longitudinal record.' });
+});
+
+// -------------------------------------------------------------
+// 8D. APPOINTMENTS & VISIT SCHEDULING MODULE
+// -------------------------------------------------------------
+app.get('/api/appointments', (req, res) => {
+  const { patient_id } = req.query;
+  let sql = `
+    SELECT ap.*, p.first_name, p.father_name, p.npdms_id, p.phone_number,
+      f.name as facility_name, f.code as facility_code, u.full_name as doctor_name
+    FROM appointments ap
+    JOIN patients p ON ap.patient_id = p.id
+    JOIN facilities f ON ap.facility_id = f.id
+    LEFT JOIN users u ON ap.doctor_id = u.id
+  `;
+  const params = [];
+  if (patient_id) {
+    sql += ' WHERE ap.patient_id = ?';
+    params.push(patient_id);
+  }
+  sql += ' ORDER BY ap.appointment_date ASC, ap.appointment_time ASC';
+  const list = db.prepare(sql).all(...params);
+  res.json(list);
+});
+
+app.post('/api/appointments', (req, res) => {
+  const {
+    patient_id, facility_id, doctor_id, department,
+    appointment_date, appointment_time, reason,
+    user_name, user_role
+  } = req.body;
+
+  if (!patient_id || !department || !appointment_date || !appointment_time) {
+    return res.status(400).json({ error: 'Patient ID, department, date, and time are required.' });
+  }
+
+  const aptId = 'APT-' + crypto.randomUUID().slice(0, 6).toUpperCase();
+
+  db.prepare(`
+    INSERT INTO appointments (
+      id, patient_id, facility_id, doctor_id, department, appointment_date, appointment_time, reason, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SCHEDULED')
+  `).run(
+    aptId,
+    patient_id,
+    facility_id || 'FAC-JUMC',
+    doctor_id || 'USR-DOC-01',
+    department,
+    appointment_date,
+    appointment_time,
+    reason || 'Routine clinical follow-up'
+  );
+
+  recordAudit(
+    doctor_id,
+    user_name || 'Scheduling Staff',
+    user_role || 'REGISTRATION_OFFICER',
+    facility_id,
+    patient_id,
+    'SCHEDULE_APPOINTMENT',
+    'APPOINTMENT_RECORD',
+    `Scheduled appointment for ${department} on ${appointment_date} at ${appointment_time}`
+  );
+
+  res.status(201).json({ success: true, appointment_id: aptId, message: 'Appointment scheduled successfully.' });
+});
+
+// -------------------------------------------------------------
 // 9. EMERGENCY "BREAK-GLASS" PROTOCOL
 // -------------------------------------------------------------
 app.post('/api/emergency/break-glass', (req, res) => {
@@ -1051,10 +1298,454 @@ app.get('/api/analytics/dashboard', (req, res) => {
   });
 });
 
+// =============================================================
+// 13. OTP AUTHORIZATION GATEWAY — Cross-Hospital Record Sharing
+// =============================================================
+
+// OTP utility: generate a random 6-digit code
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Mask phone number for display: +251-91-765-4321 → +251-91-***-4321
+function maskPhone(phone) {
+  if (!phone) return '***';
+  const parts = phone.split('-');
+  if (parts.length >= 4) {
+    return parts.slice(0, 2).join('-') + '-***-' + parts[parts.length - 1];
+  }
+  return phone.slice(0, 7) + '***' + phone.slice(-3);
+}
+
+// STEP 1: Request OTP — called when a NEW hospital wants to access an existing patient's records
+// Triggers OTP generation, records the request, and simulates SMS delivery to patient
+app.post('/api/otp/request', (req, res) => {
+  const {
+    patient_id, fayda_fin,
+    requesting_facility_id, requesting_user_id, requesting_user_name,
+    access_scope
+  } = req.body;
+
+  // Resolve patient by NPDMS ID, Fayda FIN, or internal ID
+  let patient = null;
+  if (patient_id) {
+    patient = db.prepare('SELECT * FROM patients WHERE id = ? OR npdms_id = ?').get(patient_id, patient_id);
+  } else if (fayda_fin) {
+    patient = db.prepare('SELECT * FROM patients WHERE fayda_fin = ?').get(fayda_fin);
+  }
+
+  if (!patient) {
+    return res.status(404).json({
+      error: 'Patient not found in NPDMS. Please verify the Fayda FIN or NPDMS ID and ensure the patient is registered.'
+    });
+  }
+
+  if (!patient.phone_number) {
+    return res.status(422).json({
+      error: 'Patient has no verified mobile number on record. OTP cannot be delivered. Use the Break-Glass emergency protocol or manual registration.',
+      fallback: 'BREAK_GLASS_OR_MANUAL'
+    });
+  }
+
+  // Check whether a pending OTP already exists for this patient from same requesting facility
+  const existingPending = db.prepare(`
+    SELECT * FROM otp_requests
+    WHERE patient_id = ? AND requesting_facility_id = ? AND status = 'PENDING' AND expires_at > datetime('now')
+  `).get(patient.id, requesting_facility_id);
+
+  if (existingPending) {
+    // Return existing pending OTP context (don't re-generate within 2 minutes)
+    const timeSinceCreation = new Date() - new Date(existingPending.created_at);
+    if (timeSinceCreation < 2 * 60 * 1000) {
+      return res.json({
+        status: 'PENDING',
+        otp_request_id: existingPending.id,
+        message: 'An OTP was already sent to this patient. Please wait for them to provide the code.',
+        phone_sent_to: existingPending.phone_number_sent_to,
+        expires_at: existingPending.expires_at,
+        demo_otp: existingPending.otp_code // DEMO MODE ONLY — shows OTP in response
+      });
+    }
+  }
+
+  // Generate new OTP
+  const otpCode = generateOTP();
+  const otpId = 'OTP-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+
+  // Expiry: 5 minutes from now per security requirements (stored in UTC)
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+  const maskedPhone = maskPhone(patient.phone_number);
+
+  db.prepare(`
+    INSERT INTO otp_requests (
+      id, patient_id, requesting_facility_id, requesting_user_id, requesting_user_name,
+      otp_code, otp_purpose, phone_number_sent_to, status, expires_at, patient_notified, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 'CROSS_HOSPITAL_RECORD_ACCESS', ?, 'PENDING', ?, 1, datetime('now'))
+  `).run(
+    otpId,
+    patient.id,
+    requesting_facility_id,
+    requesting_user_id || 'USR-REG-01',
+    requesting_user_name || 'Registration Officer',
+    otpCode,
+    maskedPhone,
+    expiresAt
+  );
+
+  // Audit this request
+  recordAudit(
+    requesting_user_id,
+    requesting_user_name,
+    'REGISTRATION_OFFICER',
+    requesting_facility_id,
+    patient.id,
+    'OTP_REQUEST',
+    'CROSS_HOSPITAL_ACCESS',
+    `OTP generated for cross-hospital record sharing. Requesting facility: ${requesting_facility_id}. OTP sent to ${maskedPhone}.`
+  );
+
+  // === SIMULATED SMS DELIVERY ===
+  // In production: integrate Ethiopia's Ethio Telecom SMS Gateway / Fayda Identity Platform notification service
+  console.log(`\n[OTP SERVICE - SIMULATED SMS DELIVERY]`);
+  console.log(`To: ${patient.phone_number} (${patient.first_name} ${patient.father_name})`);
+  console.log(`Message: "NPDMS Ethiopia: Your one-time authorization code for sharing your medical records with ${requesting_user_name} at the requesting hospital is: ${otpCode}. Valid for 10 minutes. Do NOT share this code. If you did not request this, call 8282."`);
+  console.log(`OTP Request ID: ${otpId}\n`);
+
+  res.status(201).json({
+    status: 'PENDING',
+    otp_request_id: otpId,
+    patient_name: `${patient.first_name} ${patient.father_name}`,
+    npdms_id: patient.npdms_id,
+    fayda_status: patient.fayda_status,
+    phone_sent_to: maskedPhone,
+    expires_at: expiresAt,
+    message: `A 6-digit OTP has been sent to the patient's verified Fayda-linked mobile number (${maskedPhone}). Ask the patient to provide the code they received.`,
+    // DEMO MODE: expose OTP in response so it can be shown in the UI sandbox
+    demo_otp: otpCode,
+    demo_note: 'In production, the OTP is only sent via SMS and never returned in the API response.'
+  });
+});
+
+// STEP 2: Verify OTP — patient hands the code to the registration officer
+// If valid: grants a time-limited access session token and creates consent record
+app.post('/api/otp/verify', (req, res) => {
+  const { otp_request_id, otp_code, requesting_user_id, requesting_user_name, requesting_facility_id } = req.body;
+
+  if (!otp_request_id || !otp_code) {
+    return res.status(400).json({ error: 'OTP request ID and OTP code are both required.' });
+  }
+
+  const otpRecord = db.prepare('SELECT * FROM otp_requests WHERE id = ?').get(otp_request_id);
+
+  if (!otpRecord) {
+    return res.status(404).json({ error: 'OTP request not found.' });
+  }
+
+  // Check status
+  if (otpRecord.status === 'VERIFIED' || otpRecord.status === 'USED') {
+    return res.status(409).json({
+      error: 'This OTP has already been used. Please request a new authorization code.',
+      status: otpRecord.status
+    });
+  }
+
+  if (otpRecord.status === 'LOCKED') {
+    return res.status(429).json({
+      error: 'This OTP authorization request has been LOCKED due to too many failed attempts (3/3). Please initiate a fresh OTP request.',
+      status: 'LOCKED'
+    });
+  }
+
+  if (otpRecord.status === 'EXPIRED') {
+    return res.status(410).json({
+      error: 'This OTP has expired. Please request a new code (OTPs are valid for 5 minutes only).',
+      status: 'EXPIRED'
+    });
+  }
+
+  if (otpRecord.status === 'CANCELLED') {
+    return res.status(410).json({ error: 'This OTP request was cancelled.', status: 'CANCELLED' });
+  }
+
+  // Check expiry (belt-and-suspenders check against current time)
+  const now = new Date();
+  // Parse stored UTC timestamp (stored without 'Z' suffix — append it for correct comparison)
+  const expiresAt = new Date(otpRecord.expires_at.replace(' ', 'T') + 'Z');
+  if (now > expiresAt) {
+    db.prepare("UPDATE otp_requests SET status = 'EXPIRED' WHERE id = ?").run(otp_request_id);
+    return res.status(410).json({
+      error: `OTP has expired at ${otpRecord.expires_at}. Please request a fresh authorization code.`,
+      status: 'EXPIRED'
+    });
+  }
+
+  // Validate the OTP code
+  if (otp_code.trim() !== otpRecord.otp_code) {
+    const attempts = (otpRecord.failed_attempts || 0) + 1;
+    if (attempts >= 3) {
+      db.prepare("UPDATE otp_requests SET failed_attempts = ?, status = 'LOCKED' WHERE id = ?").run(attempts, otp_request_id);
+      recordAudit(
+        requesting_user_id,
+        requesting_user_name,
+        'REGISTRATION_OFFICER',
+        requesting_facility_id,
+        otpRecord.patient_id,
+        'OTP_LOCKED',
+        'CROSS_HOSPITAL_ACCESS',
+        `OTP authorization locked after 3 consecutive failed attempts on request ${otp_request_id}. Access suspended.`
+      );
+      return res.status(429).json({
+        error: 'Too many incorrect attempts (3/3). This OTP authorization request has been LOCKED for patient security. Please generate a new code.',
+        status: 'LOCKED',
+        attempts
+      });
+    } else {
+      db.prepare("UPDATE otp_requests SET failed_attempts = ? WHERE id = ?").run(attempts, otp_request_id);
+      recordAudit(
+        requesting_user_id,
+        requesting_user_name,
+        'REGISTRATION_OFFICER',
+        requesting_facility_id,
+        otpRecord.patient_id,
+        'OTP_FAILED',
+        'CROSS_HOSPITAL_ACCESS',
+        `Incorrect OTP entered for request ${otp_request_id} (Attempt ${attempts}/3).`
+      );
+      return res.status(401).json({
+        error: `Incorrect OTP code. Attempt ${attempts} of 3. Please check the SMS and try again.`,
+        status: 'INVALID',
+        attempts_remaining: 3 - attempts
+      });
+    }
+  }
+
+  // OTP is VALID → generate a 60-minute session access token
+  const sessionToken = crypto.randomUUID().replace(/-/g, '').toUpperCase();
+  const sessionExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+  // Mark OTP as verified and store the session token
+  db.prepare(`
+    UPDATE otp_requests
+    SET status = 'VERIFIED', verified_at = datetime('now'),
+        access_session_token = ?, session_expires_at = ?
+    WHERE id = ?
+  `).run(sessionToken, sessionExpiresAt, otp_request_id);
+
+  // Create consent record
+  const consentId = 'CONSENT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+  const accessScope = JSON.stringify([
+    'DEMOGRAPHICS', 'ALLERGIES', 'DIAGNOSES', 'PRESCRIPTIONS',
+    'LAB_RESULTS', 'PROCEDURES', 'ENCOUNTER_NOTES', 'REFERRALS', 'DISCHARGE_SUMMARIES'
+  ]);
+
+  db.prepare(`
+    INSERT INTO record_access_consents (
+      id, otp_request_id, patient_id, authorized_facility_id, authorized_user_id,
+      access_scope, granted_at, expires_at, is_active
+    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?, 1)
+  `).run(
+    consentId,
+    otp_request_id,
+    otpRecord.patient_id,
+    requesting_facility_id,
+    requesting_user_id || otpRecord.requesting_user_id,
+    accessScope,
+    sessionExpiresAt
+  );
+
+  // Audit the successful authorization
+  recordAudit(
+    requesting_user_id || otpRecord.requesting_user_id,
+    requesting_user_name || otpRecord.requesting_user_name,
+    'REGISTRATION_OFFICER',
+    requesting_facility_id,
+    otpRecord.patient_id,
+    'OTP_VERIFIED',
+    'CROSS_HOSPITAL_ACCESS',
+    `Patient authorized cross-hospital record sharing. Session token issued. Session valid until ${sessionExpiresAt}. Consent ID: ${consentId}.`
+  );
+
+  // Retrieve full patient record now that consent is granted
+  const patient = db.prepare(`
+    SELECT p.*, f.name as registered_facility_name
+    FROM patients p LEFT JOIN facilities f ON p.created_facility_id = f.id
+    WHERE p.id = ?
+  `).get(otpRecord.patient_id);
+
+  const allergies = db.prepare("SELECT * FROM allergies WHERE patient_id = ? AND status = 'ACTIVE'").all(otpRecord.patient_id);
+  const activeMeds = db.prepare("SELECT * FROM prescriptions WHERE patient_id = ? AND status = 'ACTIVE'").all(otpRecord.patient_id);
+  const encounters = db.prepare(`
+    SELECT e.*, f.name as facility_name, f.code as facility_code, u.full_name as provider_name
+    FROM encounters e
+    JOIN facilities f ON e.facility_id = f.id
+    JOIN users u ON e.provider_id = u.id
+    WHERE e.patient_id = ?
+    ORDER BY e.started_at DESC
+  `).all(otpRecord.patient_id);
+
+  const diagnoses = db.prepare('SELECT * FROM diagnoses WHERE patient_id = ? ORDER BY recorded_at DESC').all(otpRecord.patient_id);
+  const labs = db.prepare("SELECT * FROM lab_investigations WHERE patient_id = ? AND status = 'COMPLETED' ORDER BY completed_at DESC").all(otpRecord.patient_id);
+  const procedures = db.prepare('SELECT * FROM procedures WHERE patient_id = ? ORDER BY performed_at DESC').all(otpRecord.patient_id);
+  const referrals = db.prepare('SELECT * FROM referrals WHERE patient_id = ? ORDER BY created_at DESC').all(otpRecord.patient_id);
+
+  // Parse JSON fields
+  const enrichedEncounters = encounters.map(enc => {
+    let vitals = null;
+    let soapNotes = null;
+    try { vitals = enc.vitals_json ? JSON.parse(enc.vitals_json) : null; } catch (e) {}
+    try { soapNotes = enc.soap_notes_json ? JSON.parse(enc.soap_notes_json) : null; } catch (e) {}
+    return { ...enc, vitals, soapNotes };
+  });
+
+  res.json({
+    authorization: {
+      status: 'AUTHORIZED',
+      consent_id: consentId,
+      session_token: sessionToken,
+      session_expires_at: sessionExpiresAt,
+      access_scope: JSON.parse(accessScope),
+      message: 'Patient has successfully authorized access to their medical records. Access session is valid for 60 minutes.'
+    },
+    patient: {
+      ...patient,
+      allergies,
+      activeMedications: activeMeds
+    },
+    medicalRecord: {
+      encounters: enrichedEncounters,
+      diagnoses,
+      labs,
+      procedures,
+      referrals
+    }
+  });
+});
+
+// STEP 3: Check OTP Request Status (for polling)
+app.get('/api/otp/status/:otpRequestId', (req, res) => {
+  const record = db.prepare('SELECT id, status, expires_at, verified_at, phone_number_sent_to, patient_id FROM otp_requests WHERE id = ?').get(req.params.otpRequestId);
+  if (!record) return res.status(404).json({ error: 'OTP request not found' });
+  res.json(record);
+});
+
+// STEP 4: Cancel an OTP Request (patient denies consent)
+app.post('/api/otp/cancel/:otpRequestId', (req, res) => {
+  const { user_id, user_name, facility_id } = req.body;
+  const record = db.prepare('SELECT * FROM otp_requests WHERE id = ?').get(req.params.otpRequestId);
+
+  if (!record) return res.status(404).json({ error: 'OTP request not found' });
+
+  db.prepare("UPDATE otp_requests SET status = 'CANCELLED' WHERE id = ?").run(req.params.otpRequestId);
+
+  recordAudit(
+    user_id,
+    user_name,
+    'REGISTRATION_OFFICER',
+    facility_id,
+    record.patient_id,
+    'OTP_CANCELLED',
+    'CROSS_HOSPITAL_ACCESS',
+    'Patient denied consent or officer cancelled the cross-hospital record sharing request.'
+  );
+
+  res.json({ success: true, message: 'OTP request cancelled. Patient consent not granted.' });
+});
+
+// STEP 5: List all OTP requests (for Audit / Administrative oversight)
+app.get('/api/otp/history', (req, res) => {
+  const { patient_id, limit = 50 } = req.query;
+  let sql = `
+    SELECT o.*,
+      p.first_name, p.father_name, p.npdms_id,
+      f.name as requesting_facility_name, f.code as requesting_facility_code
+    FROM otp_requests o
+    JOIN patients p ON o.patient_id = p.id
+    JOIN facilities f ON o.requesting_facility_id = f.id
+  `;
+  const params = [];
+
+  if (patient_id) {
+    sql += ' WHERE o.patient_id = ?';
+    params.push(patient_id);
+  }
+
+  sql += ' ORDER BY o.created_at DESC LIMIT ?';
+  params.push(parseInt(limit));
+
+  const records = db.prepare(sql).all(...params);
+  res.json(records);
+});
+
+// STEP 6: Validate a session token (middleware-style check for protected record access)
+app.get('/api/otp/validate-session', (req, res) => {
+  const { token, patient_id } = req.query;
+  if (!token) return res.status(400).json({ valid: false, error: 'Session token required' });
+
+  const session = db.prepare(`
+    SELECT o.*, p.first_name, p.father_name, p.npdms_id
+    FROM otp_requests o
+    JOIN patients p ON o.patient_id = p.id
+    WHERE o.access_session_token = ?
+      AND o.status = 'VERIFIED'
+      AND o.session_expires_at > datetime('now')
+      ${patient_id ? "AND o.patient_id = '" + patient_id + "'" : ''}
+  `).get(token);
+
+  if (!session) {
+    return res.json({ valid: false, reason: 'Session expired or not found. Please re-authorize.' });
+  }
+
+  res.json({
+    valid: true,
+    patient_id: session.patient_id,
+    patient_name: `${session.first_name} ${session.father_name}`,
+    npdms_id: session.npdms_id,
+    session_expires_at: session.session_expires_at,
+    requesting_facility: session.requesting_facility_id
+  });
+});
+
+// =============================================================
+// API HEALTH & DOCUMENTATION ROOT
+// =============================================================
+app.get('/api/routes', (req, res) => {
+  res.json({
+    service: 'Ethiopian NPDMS Backend API',
+    version: '1.0.0-MVP',
+    modules: {
+      health: 'GET /api/health',
+      facilities: 'GET /api/facilities',
+      patients: 'GET /api/patients | POST /api/patients | GET /api/patients/:id',
+      fayda: 'POST /api/fayda/lookup | POST /api/fayda/link/:patientId',
+      otp: {
+        step1_request: 'POST /api/otp/request',
+        step2_verify: 'POST /api/otp/verify',
+        step3_status: 'GET /api/otp/status/:id',
+        step4_cancel: 'POST /api/otp/cancel/:id',
+        history: 'GET /api/otp/history',
+        validate_session: 'GET /api/otp/validate-session'
+      },
+      encounters: 'GET /api/encounters/patient/:id | POST /api/encounters',
+      allergies: 'POST /api/allergies',
+      prescriptions: 'GET /api/prescriptions/patient/:id | POST /api/prescriptions/safety-check | POST /api/prescriptions/:id/dispense',
+      pharmacy: 'GET /api/pharmacy/queue',
+      labs: 'GET /api/labs/queue | POST /api/labs/:id/publish',
+      referrals: 'GET /api/referrals | POST /api/referrals | POST /api/referrals/:id/respond',
+      emergency: 'POST /api/emergency/break-glass',
+      duplicates: 'GET /api/duplicates | POST /api/duplicates/resolve',
+      audit: 'GET /api/audit-logs',
+      fhir: 'GET /api/fhir/Patient/:id | GET /api/fhir/Bundle/:id',
+      analytics: 'GET /api/analytics/dashboard'
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(` Ethiopian National Patient Data Management System (NPDMS)`);
   console.log(` Backend Service running on port ${PORT}`);
   console.log(` HL7 FHIR R4 Ready | Fayda Mock Service Active`);
+  console.log(` OTP Cross-Hospital Authorization Gateway ENABLED`);
   console.log(`=======================================================`);
 });

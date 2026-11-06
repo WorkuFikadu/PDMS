@@ -2,7 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import PatientRegistry from './components/PatientRegistry';
+import CrossHospitalAccess from './components/CrossHospitalAccess';
 import LongitudinalEHR from './components/LongitudinalEHR';
+import SurgeryModule from './components/SurgeryModule';
+import AdmissionsModule from './components/AdmissionsModule';
 import ReferralsHub from './components/ReferralsHub';
 import PharmacyModule from './components/PharmacyModule';
 import DiagnosticsModule from './components/DiagnosticsModule';
@@ -120,12 +123,39 @@ export default function App() {
               />
             )}
 
+            {/* OTP-Based Cross-Hospital Medical Record Sharing Gateway */}
+            {activeTab === 'cross-hospital' && (
+              <CrossHospitalAccess
+                currentFacility={currentFacility}
+                currentUser={currentUser}
+                t={t}
+              />
+            )}
+
             {activeTab === 'timeline' && (
               <LongitudinalEHR
                 patientId={selectedPatientId}
                 currentFacility={currentFacility}
                 currentUser={currentUser}
                 onRefresh={handleRefreshPatients}
+                t={t}
+              />
+            )}
+
+            {activeTab === 'surgeries' && (
+              <SurgeryModule
+                currentFacility={currentFacility}
+                currentUser={currentUser}
+                patients={patients}
+                t={t}
+              />
+            )}
+
+            {activeTab === 'admissions' && (
+              <AdmissionsModule
+                currentFacility={currentFacility}
+                currentUser={currentUser}
+                patients={patients}
                 t={t}
               />
             )}

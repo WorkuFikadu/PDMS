@@ -2,7 +2,8 @@
 import React from 'react';
 import {
   Users, Activity, FileText, Share2, Pill, FlaskConical,
-  ShieldAlert, BarChart3, Globe, Building2, UserCheck, Shield
+  ShieldAlert, BarChart3, Globe, Building2, UserCheck, Shield,
+  KeyRound, Hospital, Bed
 } from 'lucide-react';
 
 export default function Header({
@@ -123,12 +124,42 @@ export default function Header({
           {t.navPatients}
         </button>
 
+        {/* FEATURE HIGHLIGHT: Cross-Hospital Record Sharing via OTP */}
+        <button
+          onClick={() => setActiveTab('cross-hospital')}
+          className={`flex items-center gap-2 py-3 px-3.5 border-b-2 transition whitespace-nowrap ${activeTab === 'cross-hospital' ? 'border-indigo-600 text-indigo-700 font-bold bg-indigo-50/50' : 'border-transparent text-indigo-900 hover:text-indigo-700 hover:border-indigo-300'}`}
+        >
+          <KeyRound className="w-4 h-4 text-indigo-600" />
+          <span className="relative">
+            {t.navCrossHospitalOtp}
+            <span className="ml-1.5 px-1.5 py-0.2 bg-indigo-600 text-white rounded-full text-[9px] font-bold">
+              OTP
+            </span>
+          </span>
+        </button>
+
         <button
           onClick={() => setActiveTab('timeline')}
           className={`flex items-center gap-2 py-3 px-3.5 border-b-2 transition whitespace-nowrap ${activeTab === 'timeline' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-900 hover:border-slate-300'}`}
         >
           <Activity className="w-4 h-4" />
           {t.navClinicalTimeline}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('surgeries')}
+          className={`flex items-center gap-2 py-3 px-3.5 border-b-2 transition whitespace-nowrap ${activeTab === 'surgeries' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-900 hover:border-slate-300'}`}
+        >
+          <Hospital className="w-4 h-4" />
+          {t.navSurgeries}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('admissions')}
+          className={`flex items-center gap-2 py-3 px-3.5 border-b-2 transition whitespace-nowrap ${activeTab === 'admissions' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-900 hover:border-slate-300'}`}
+        >
+          <Building2 className="w-4 h-4" />
+          {t.navAdmissions}
         </button>
 
         <button

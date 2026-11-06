@@ -159,20 +159,61 @@ function initDatabase() {
 
     CREATE TABLE IF NOT EXISTS procedures (
       id TEXT PRIMARY KEY,
-      encounter_id TEXT NOT NULL,
+      encounter_id TEXT,
       patient_id TEXT NOT NULL,
       facility_id TEXT NOT NULL,
       surgeon_id TEXT NOT NULL,
       procedure_name TEXT NOT NULL,
       indication TEXT NOT NULL,
+      surgical_team TEXT,                    -- Assistant surgeons, scrub nurses
+      anesthesia_type TEXT DEFAULT 'GENERAL',-- GENERAL, SPINAL, LOCAL, SEDATION
       operative_notes TEXT,
-      outcome TEXT,
+      outcome TEXT,                          -- SUCCESSFUL, PARTIAL, COMPLICATIONS
       complications TEXT,
+      post_op_treatment TEXT,                -- Antibiotics, analgesia, wound care
+      recovery_progress TEXT,                -- Day 1-7 recovery status
+      future_recommendations TEXT,           -- Follow-up surgery, implant removal
       performed_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (encounter_id) REFERENCES encounters(id),
       FOREIGN KEY (patient_id) REFERENCES patients(id),
       FOREIGN KEY (facility_id) REFERENCES facilities(id),
       FOREIGN KEY (surgeon_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS admissions (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      facility_id TEXT NOT NULL,
+      admitting_doctor_id TEXT NOT NULL,
+      ward_name TEXT NOT NULL,               -- e.g. Medical Ward 3, Surgical ICU, Pediatric Ward
+      bed_number TEXT NOT NULL,
+      admission_reason TEXT NOT NULL,
+      status TEXT DEFAULT 'ADMITTED',        -- ADMITTED, DISCHARGED, TRANSFERRED
+      admitted_at TEXT DEFAULT (datetime('now')),
+      discharge_date TEXT,
+      discharge_summary TEXT,
+      post_discharge_instructions TEXT,
+      condition_on_discharge TEXT,           -- RECOVERED, IMPROVED, UNCHANGED, REFERRED
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id),
+      FOREIGN KEY (facility_id) REFERENCES facilities(id),
+      FOREIGN KEY (admitting_doctor_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS appointments (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      facility_id TEXT NOT NULL,
+      doctor_id TEXT,
+      department TEXT NOT NULL,              -- Internal Medicine, Surgery, Pediatrics, Ob/Gyn
+      appointment_date TEXT NOT NULL,
+      appointment_time TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      status TEXT DEFAULT 'SCHEDULED',       -- SCHEDULED, COMPLETED, CANCELLED
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id),
+      FOREIGN KEY (facility_id) REFERENCES facilities(id),
+      FOREIGN KEY (doctor_id) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS referrals (
@@ -219,6 +260,44 @@ function initDatabase() {
       reviewed_by TEXT,
       reviewed_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- OTP AUTHORIZATION GATEWAY: Cross-Hospital Record Sharing
+    CREATE TABLE IF NOT EXISTS otp_requests (
+      id TEXT PRIMARY KEY,
+      patient_id TEXT NOT NULL,
+      requesting_facility_id TEXT NOT NULL,
+      requesting_user_id TEXT NOT NULL,
+      requesting_user_name TEXT NOT NULL,
+      otp_code TEXT NOT NULL,                     -- 6-digit OTP (hashed in production)
+      otp_purpose TEXT DEFAULT 'CROSS_HOSPITAL_RECORD_ACCESS',
+      phone_number_sent_to TEXT NOT NULL,          -- Masked phone for display
+      status TEXT DEFAULT 'PENDING',              -- PENDING, VERIFIED, EXPIRED, USED, CANCELLED, LOCKED
+      failed_attempts INTEGER DEFAULT 0,          -- Max 3 incorrect attempts before invalidating
+      expires_at TEXT NOT NULL,                   -- 5-minute expiry timestamp
+      verified_at TEXT,
+      access_session_token TEXT,                  -- Short-lived token for authorized record access
+      session_expires_at TEXT,                    -- Access session valid for 60 mins
+      patient_notified INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (patient_id) REFERENCES patients(id),
+      FOREIGN KEY (requesting_facility_id) REFERENCES facilities(id)
+    );
+
+    -- RECORD ACCESS CONSENTS: Patient-authorized cross-hospital data sharing log
+    CREATE TABLE IF NOT EXISTS record_access_consents (
+      id TEXT PRIMARY KEY,
+      otp_request_id TEXT NOT NULL,
+      patient_id TEXT NOT NULL,
+      authorized_facility_id TEXT NOT NULL,
+      authorized_user_id TEXT NOT NULL,
+      access_scope TEXT NOT NULL,                 -- JSON: array of allowed record types
+      granted_at TEXT DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      FOREIGN KEY (otp_request_id) REFERENCES otp_requests(id),
+      FOREIGN KEY (patient_id) REFERENCES patients(id),
+      FOREIGN KEY (authorized_facility_id) REFERENCES facilities(id)
     );
   `);
   console.log('NPDMS Database schema initialized successfully.');

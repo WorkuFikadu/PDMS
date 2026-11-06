@@ -5,8 +5,14 @@ const crypto = require('crypto');
 function seedDatabase() {
   initDatabase();
 
-  // Clear existing data to ensure clean seed
+  // Temporarily disable foreign keys for clean re-seed
+  db.exec('PRAGMA foreign_keys = OFF;');
+
   db.exec(`
+    DELETE FROM record_access_consents;
+    DELETE FROM otp_requests;
+    DELETE FROM appointments;
+    DELETE FROM admissions;
     DELETE FROM duplicate_reviews;
     DELETE FROM audit_logs;
     DELETE FROM referrals;
@@ -20,6 +26,8 @@ function seedDatabase() {
     DELETE FROM users;
     DELETE FROM facilities;
   `);
+
+  db.exec('PRAGMA foreign_keys = ON;');
 
   console.log('Seeding Ethiopian health facilities...');
   const insertFacility = db.prepare(`
@@ -290,25 +298,95 @@ function seedDatabase() {
 
   labs.forEach(l => insertLab.run(...l));
 
-  console.log('Seeding procedures...');
+  console.log('Seeding procedures & surgeries...');
   const insertProcedure = db.prepare(`
     INSERT INTO procedures (
       id, encounter_id, patient_id, facility_id, surgeon_id, procedure_name,
-      indication, operative_notes, outcome, complications, performed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      indication, surgical_team, anesthesia_type, operative_notes, outcome,
+      complications, post_op_treatment, recovery_progress, future_recommendations, performed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const procedures = [
     [
       'PROC-001', 'ENC-004', 'PAT-003', 'FAC-JUMC', 'USR-DOC-01',
       'Closed Reduction and Above-Knee Long Leg Plaster Cast Application',
-      'Displaced mid-shaft fracture of left tibia/fibula following RTA',
-      'Under aseptic precautions and sedation, longitudinal traction applied. Anatomical alignment restored and verified under fluoroscopy. Long leg POP backslab and circular cast applied. Neurovascular status reassessed: DP and PT pulses strong, toe warmth and capillary refill normal.',
-      'Satisfactory bone alignment achieved, limb immobilized', 'None noted intraoperatively', '2026-11-05 23:00:00'
+      'Displaced mid-shaft fracture of left tibia/fibula following RTA along Jimma-Agaro road',
+      'Dr. Abebe Tadesse (Lead Orthopedic Surgeon), Sr. Fatuma Kedir (Scrub Nurse)',
+      'SEDATION',
+      'Under aseptic precautions and IV sedation, longitudinal traction applied. Anatomical alignment restored and verified under fluoroscopy. Long leg POP backslab and circular cast applied. Neurovascular status reassessed: DP and PT pulses strong, toe warmth and capillary refill normal.',
+      'SUCCESSFUL', 'None noted intraoperatively',
+      'Elevate limb on pillows. Analgesia: Tramadol 50mg po TID PRN. Prophylactic anticoagulation: Enoxaparin 40mg SC daily for 14 days.',
+      'Post-op day 1: Toe movements intact, minimal swelling, neurovascularly intact.',
+      'Repeat check X-ray in 2 weeks at JUMC Orthopedic Clinic. Cast change to PTB cast at 6 weeks.',
+      '2026-11-05 23:00:00'
+    ],
+    [
+      'PROC-002', 'ENC-001', 'PAT-001', 'FAC-JUMC', 'USR-DOC-01',
+      'Diagnostic Fundoscopy & Direct Ophthalmoscopy',
+      'Cardiovascular organ damage assessment for uncontrolled Stage 2 Hypertension',
+      'Dr. Abebe Tadesse (Cardiology/Internal Medicine)',
+      'LOCAL',
+      'Pupils dilated with Tropicamide 1%. Bilateral fundi visualized. Arteriolar narrowing noted (Grade 1 hypertensive retinopathy). No flame hemorrhages, cotton wool spots, or papilledema.',
+      'SUCCESSFUL', 'None',
+      'Continue aggressive blood pressure control with Amlodipine 10mg and Losartan 50mg.',
+      'Full visual acuity preserved.',
+      'Annual dilated eye examination at JUMC Ophthalmology.',
+      '2026-10-18 11:30:00'
     ]
   ];
 
   procedures.forEach(p => insertProcedure.run(...p));
+
+  console.log('Seeding inpatient admissions...');
+  const insertAdmission = db.prepare(`
+    INSERT INTO admissions (
+      id, patient_id, facility_id, admitting_doctor_id, ward_name, bed_number,
+      admission_reason, status, admitted_at, discharge_date, discharge_summary, post_discharge_instructions, condition_on_discharge
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const admissions = [
+    [
+      'ADM-001', 'PAT-003', 'FAC-JUMC', 'USR-DOC-01', 'Orthopedic Surgery Ward B', 'Bed 14',
+      'Acute polytrauma following motorcycle crash; displaced left tibia fracture requiring surgical stabilization.',
+      'ADMITTED', '2026-11-05 22:30:00', null, null, null, null
+    ],
+    [
+      'ADM-002', 'PAT-001', 'FAC-AGARO', 'USR-DOC-03', 'Medical Inpatient Ward', 'Bed 08',
+      'Hypertensive urgency (BP 172/104) with acute symptomatic headache and hyperglycemia.',
+      'DISCHARGED', '2026-09-10 10:00:00', '2026-09-12 14:00:00',
+      'Patient stabilized with oral antihypertensives (Amlodipine 5mg) and oral hypoglycemics (Metformin 500mg BID). Blood pressure decreased to 142/88 mmHg. Fasting blood sugar stabilized to 148 mg/dL. Referred to JUMC Cardiology for specialized longitudinal management.',
+      'Continue low-sodium diet, take prescribed medications regularly, avoid alcohol, attend JUMC cardiology appointment.',
+      'IMPROVED'
+    ]
+  ];
+
+  admissions.forEach(a => insertAdmission.run(...a));
+
+  console.log('Seeding scheduled appointments...');
+  const insertAppointment = db.prepare(`
+    INSERT INTO appointments (
+      id, patient_id, facility_id, doctor_id, department, appointment_date, appointment_time, reason, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const appointments = [
+    [
+      'APT-001', 'PAT-001', 'FAC-JUMC', 'USR-DOC-01', 'Cardiology & Endocrine Clinic',
+      '2026-11-18', '09:30 AM', '4-week follow-up for blood pressure and HbA1c review', 'SCHEDULED'
+    ],
+    [
+      'APT-002', 'PAT-002', 'FAC-SHENEN', 'USR-DOC-02', 'Antenatal & Maternal Health',
+      '2026-11-16', '10:00 AM', 'Routine 34-week gestational age antenatal checkup', 'SCHEDULED'
+    ],
+    [
+      'APT-003', 'PAT-003', 'FAC-JUMC', 'USR-DOC-01', 'Orthopedic Outpatient Clinic',
+      '2026-11-19', '02:00 PM', 'Cast check and 2-week follow-up X-ray for left tibia fracture', 'SCHEDULED'
+    ]
+  ];
+
+  appointments.forEach(ap => insertAppointment.run(...ap));
 
   console.log('Seeding cross-facility referrals...');
   const insertReferral = db.prepare(`
