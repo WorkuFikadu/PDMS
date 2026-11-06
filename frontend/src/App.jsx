@@ -48,7 +48,7 @@ export default function App() {
 
       setFacilities(dataF);
       if (dataF.length > 0 && !currentFacility) {
-        setCurrentFacility(dataF[0]); // Jimma University Medical Center
+        setCurrentFacility(dataF[0]); // Jimma Medical Center (JMC)
       }
 
       setUsers(dataU);
@@ -243,10 +243,10 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 px-6 text-center text-xs text-slate-500">
         <p className="font-semibold text-slate-700">
-          Ethiopian National Patient Data Management System (NPDMS) — Jimma University Department of Computer Science
+          Federal Democratic Republic of Ethiopia — National Patient Data Management System (NPDMS)
         </p>
         <p className="text-[11px] text-slate-400 mt-1">
-          Final-Year Capstone Project by Worku Fikadu • Supervised Clinical Architecture • Aligned with FDRE Ministry of Health Digital Health Strategy & Fayda ID
+          Federal Ministry of Health (MOH) • Unified Health Spine & Fayda National Digital Identity Integration
         </p>
       </footer>
     </div>

@@ -264,7 +264,7 @@ export default function AppointmentsModule({
                   onChange={(e) => setDepartment(e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white font-medium"
                 >
-                  <option value="Cardiology & Endocrine Clinic">Cardiology & Endocrine Clinic (JUMC)</option>
+                  <option value="Cardiology & Endocrine Clinic">Cardiology & Endocrine Clinic (JMC)</option>
                   <option value="Orthopedic Outpatient Clinic">Orthopedic Outpatient Clinic</option>
                   <option value="Antenatal & Maternal Health">Antenatal & Maternal Health (Shenen Gibe)</option>
                   <option value="General Outpatient Department (OPD)">General Outpatient Department (OPD)</option>

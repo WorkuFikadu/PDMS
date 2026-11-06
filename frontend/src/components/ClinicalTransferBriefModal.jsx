@@ -96,7 +96,7 @@ export default function ClinicalTransferBriefModal({
             </div>
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Target Receiving Center</span>
-              <p className="font-bold text-sky-800">Jimma University Medical Center (JUMC)</p>
+              <p className="font-bold text-sky-800">Jimma Medical Center (JMC)</p>
               <p className="text-slate-500 text-[11px]">Specialized Referral Hospital · Oromia, Jimma</p>
             </div>
           </div>

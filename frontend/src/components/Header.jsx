@@ -157,7 +157,7 @@ export default function Header({
             </span>
             <span className="hidden lg:inline text-slate-600">•</span>
             <span className="hidden lg:inline text-slate-400 text-[11px]">
-              Jimma University CS Final-Year Capstone (Worku Fikadu, 2026)
+              National Health Information Network (NHIN) • Interoperable Health Spine
             </span>
           </div>
 

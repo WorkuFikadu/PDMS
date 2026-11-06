@@ -39,7 +39,7 @@ function seedDatabase() {
   `);
 
   const facilities = [
-    ['FAC-JUMC', 'Jimma University Medical Center (JUMC)', 'JUMC-ETH', 'SPECIALIZED_HOSPITAL', 'Oromia', 'Jimma', 'Jimma City', '+251-47-111-1458'],
+    ['FAC-JUMC', 'Jimma Medical Center (JMC)', 'JMC-ETH', 'SPECIALIZED_HOSPITAL', 'Oromia', 'Jimma', 'Jimma City', '+251-47-111-1458'],
     ['FAC-SHENEN', 'Shenen Gibe General Hospital', 'SGGH-ETH', 'GENERAL_HOSPITAL', 'Oromia', 'Jimma', 'Jimma City', '+251-47-111-2090'],
     ['FAC-AGARO', 'Agaro Primary Hospital', 'APH-ETH', 'PRIMARY_HOSPITAL', 'Oromia', 'Jimma', 'Agaro Town', '+251-47-225-0120'],
     ['FAC-TASH', 'Tikur Anbessa (Black Lion) Specialized Hospital', 'TASH-ETH', 'SPECIALIZED_HOSPITAL', 'Addis Ababa', 'Lideta', 'Lideta Woreda 03', '+251-11-551-1211']

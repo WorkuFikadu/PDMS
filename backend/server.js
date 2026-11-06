@@ -35,7 +35,7 @@ app.get('/api/health', (req, res) => {
     status: 'online',
     service: 'Ethiopia National Patient Data Management System (NPDMS)',
     version: '1.0.0-MVP',
-    institution: 'Jimma University - Department of Computer Science',
+    institution: 'Federal Ministry of Health (FDRE - MOH)',
     timestamp: new Date().toISOString()
   });
 });
@@ -1142,7 +1142,7 @@ app.post('/api/ai/summarize', (req, res) => {
     };
   } else {
     summaryContent = {
-      executiveDigest: `${patient.first_name} ${patient.father_name} (${age}yo ${patient.gender}) has a longitudinal care trajectory across ${encounters.length} participating health facilities. Initially diagnosed with uncontrolled Stage 2 Hypertension and Type 2 Diabetes at Agaro Primary Hospital; subsequently stepped-up on dual antihypertensive therapy and monitored at Jimma University Medical Center (JUMC).`,
+      executiveDigest: `${patient.first_name} ${patient.father_name} (${age}yo ${patient.gender}) has a longitudinal care trajectory across ${encounters.length} participating health facilities. Initially diagnosed with uncontrolled Stage 2 Hypertension and Type 2 Diabetes at Agaro Primary Hospital; subsequently stepped-up on dual antihypertensive therapy and monitored at Jimma Medical Center (JMC).`,
       criticalAlerts: criticalAllergies.length > 0
         ? `⚠️ CRITICAL ALLERGY ALERT: Patient has documented ${criticalAllergies[0].severity} allergy to '${criticalAllergies.map(a => a.allergen).join(', ')}' (${criticalAllergies[0].reaction}). Contraindicated for all Beta-lactam antibiotic therapies.`
         : 'No life-threatening allergies documented.',

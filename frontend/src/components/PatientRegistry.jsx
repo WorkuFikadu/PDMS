@@ -155,14 +155,14 @@ export default function PatientRegistry({
                 CORE SYSTEM ARCHITECTURE
               </span>
               <span className="text-xs text-sky-300 font-semibold">
-                FDRE Ministry of Health • Jimma University
+                FDRE Ministry of Health • National Health Data Division
               </span>
             </div>
             <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
               One Patient • One Fayda Identity • Treated Anywhere, Stored in One Record
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed">
-              When a patient visits a primary clinic in Agaro, is referred to Jimma University Medical Center (JUMC), or undergoes surgery at Tikur Anbessa in Addis Ababa, all clinical histories, life-threatening allergies, and prescriptions are synchronized into a single, permanent longitudinal record anchored by their verified Ethiopian National Digital ID (Fayda).
+              When a patient visits a primary clinic in Agaro, is referred to Jimma Medical Center (JMC), or undergoes surgery at Tikur Anbessa in Addis Ababa, all clinical histories, life-threatening allergies, and prescriptions are synchronized into a single, permanent longitudinal record anchored by their verified Ethiopian National Digital ID (Fayda).
             </p>
           </div>
 
@@ -363,7 +363,7 @@ export default function PatientRegistry({
             <div className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-base">{t.registrationTitle}</h3>
-                <p className="text-xs text-slate-400">Jimma University Medical Center & National Health Registry</p>
+                <p className="text-xs text-slate-400">Federal Ministry of Health • National Health Registry</p>
               </div>
               <button
                 onClick={() => setShowRegisterModal(false)}

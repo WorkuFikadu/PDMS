@@ -258,7 +258,7 @@ export default function ReferralsHub({
                     onChange={(e) => setToFacilityId(e.target.value)}
                     className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white"
                   >
-                    <option value="FAC-JUMC">Jimma Univ. Medical Center</option>
+                    <option value="FAC-JUMC">Jimma Medical Center (JMC)</option>
                     <option value="FAC-SHENEN">Shenen Gibe Hospital</option>
                     <option value="FAC-AGARO">Agaro Primary Hospital</option>
                     <option value="FAC-TASH">Tikur Anbessa Hospital</option>
