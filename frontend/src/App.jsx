@@ -15,7 +15,6 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import PatientPortal from './components/PatientPortal';
 import AppointmentsModule from './components/AppointmentsModule';
 import MaternalChildModule from './components/MaternalChildModule';
-import OfflineSyncBar from './components/OfflineSyncBar';
 import { translations } from './i18n';
 
 export default function App() {
@@ -104,12 +103,6 @@ export default function App() {
         currentUser={currentUser}
         setCurrentUser={setCurrentUser}
         users={users}
-      />
-
-      {/* Offline Sync Bar & Simulator */}
-      <OfflineSyncBar
-        currentFacility={currentFacility}
-        currentUser={currentUser}
         onSyncComplete={handleRefreshPatients}
       />
 

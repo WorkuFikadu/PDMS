@@ -18,6 +18,12 @@ export const translations = {
     navAudit: 'Security & Audit Trail',
     navAnalytics: 'Facility Analytics',
     navPatientPortal: 'Patient Portal',
+    navMore: 'More Modules',
+    catAll: 'All Modules',
+    catClinical: 'Clinical & Inpatient',
+    catContinuity: 'Care Continuity',
+    catDiagnostics: 'Pharmacy & Lab',
+    catGovernance: 'Governance & Analytics',
 
     // Role switcher & Facility header
     activeFacility: 'Active Facility',
@@ -151,6 +157,12 @@ export const translations = {
     navAudit: 'Hordoffii fi Eegumsa Galmee',
     navAnalytics: 'Ragaa fi Istaatistiksii',
     navPatientPortal: 'Galgala Dhukkubsataa',
+    navMore: 'Kutaalee Biroo',
+    catAll: 'Hunda',
+    catClinical: 'Yaala fi Siree',
+    catContinuity: 'Ergisa fi Sagantaa',
+    catDiagnostics: 'Faarmaasii fi Laabii',
+    catGovernance: 'To\'annoo fi Ragaa',
 
     activeFacility: 'Dhaabbata Ammaa',
     activeRole: 'Gahee Ammaa',
@@ -274,6 +286,12 @@ export const translations = {
     navAudit: 'የደህንነት እና ክትትል ኦዲት',
     navAnalytics: 'የተቋማት ስታቲስቲክስ',
     navPatientPortal: 'የታካሚ መግቢያ ገጽ',
+    navMore: 'ተጨማሪ ክፍሎች',
+    catAll: 'ሁሉም ክፍሎች',
+    catClinical: 'ክሊኒካል እና ተኝቶ ህክምና',
+    catContinuity: 'ሪፈራል እና ፕሮግራሞች',
+    catDiagnostics: 'ፋርማሲ እና ላቦራቶሪ',
+    catGovernance: 'አስተዳደር እና ኦዲት',
 
     activeFacility: 'ወቅታዊ የህክምና ተቋም',
     activeRole: 'ወቅታዊ የስራ ድርሻ',
