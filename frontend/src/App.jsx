@@ -20,6 +20,7 @@ import AiClinicalHub from './components/AiClinicalHub';
 import HospitalNetworkModule from './components/HospitalNetworkModule';
 import EmergencyBloodBank from './components/EmergencyBloodBank';
 import LoginPage from './components/LoginPage';
+import { apiFetch } from './api';
 import { translations } from './i18n';
 import { CheckCircle2, Stethoscope, X } from 'lucide-react';
 
@@ -100,7 +101,7 @@ export default function App() {
     setSyncToast('');
 
     try {
-      const res = await fetch('/api/sync/batch', {
+      const res = await apiFetch('/api/sync/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,30 +131,33 @@ export default function App() {
   const loadInitialData = async () => {
     try {
       const [resF, resU, resP] = await Promise.all([
-        fetch('/api/facilities'),
-        fetch('/api/auth/users'),
-        fetch('/api/patients')
+        apiFetch('/api/facilities'),
+        apiFetch('/api/auth/users'),
+        apiFetch('/api/patients')
       ]);
 
       const dataF = await resF.json();
       const dataU = await resU.json();
       const dataP = await resP.json();
 
-      setFacilities(dataF);
-      if (dataF.length > 0 && !currentFacility) {
-        if (currentUser && currentUser.facility_id) {
-          const userFac = dataF.find(f => f.id === currentUser.facility_id);
-          setCurrentFacility(userFac || dataF[0]);
-        } else {
-          setCurrentFacility(dataF[0]); // Jimma Medical Center (JMC)
+      if (Array.isArray(dataF) && dataF.length > 0) {
+        setFacilities(dataF);
+        if (!currentFacility) {
+          if (currentUser && currentUser.facility_id) {
+            const userFac = dataF.find(f => f.id === currentUser.facility_id);
+            setCurrentFacility(userFac || dataF[0]);
+          } else {
+            setCurrentFacility(dataF[0]); // Jimma Medical Center (JMC)
+          }
         }
       }
 
-      setUsers(dataU);
-
-      setPatients(dataP);
-      if (dataP.length > 0 && !selectedPatientId) {
-        setSelectedPatientId(dataP[0].id);
+      if (Array.isArray(dataU)) setUsers(dataU);
+      if (Array.isArray(dataP)) {
+        setPatients(dataP);
+        if (dataP.length > 0 && !selectedPatientId) {
+          setSelectedPatientId(dataP[0].id);
+        }
       }
     } catch (err) {
       console.error('Failed to load application data:', err);

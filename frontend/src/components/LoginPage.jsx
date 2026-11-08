@@ -1,11 +1,29 @@
 // frontend/src/components/LoginPage.jsx
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../api';
 import {
   ShieldCheck, Lock, User, Building2, KeyRound, Fingerprint,
   QrCode, ArrowRight, CheckCircle2, AlertCircle, Eye, EyeOff,
   Stethoscope, Sparkles, HeartPulse, Hospital, Shield, Globe,
   RotateCcw, MessageSquare, X, Check, Activity, Bed, Users
 } from 'lucide-react';
+
+// Built-in national facility catalog fallback (guarantees zero empty dropdowns)
+const DEFAULT_ETHIOPIAN_FACILITIES = [
+  { id: 'FAC-JUMC', name: 'Jimma Medical Center (JMC)', code: 'JMC-ETH', region: 'Oromia' },
+  { id: 'FAC-TASH', name: 'Tikur Anbessa (Black Lion) Specialized Hospital', code: 'TASH-ETH', region: 'Addis Ababa' },
+  { id: 'FAC-ALERT', name: 'ALERT Hospital (All Africa Leprosy)', code: 'ALERT-ETH', region: 'Addis Ababa' },
+  { id: 'FAC-YEKAT', name: 'Yekatit 12 Hospital Medical College', code: 'YEK12-ETH', region: 'Addis Ababa' },
+  { id: 'FAC-GHION', name: "St. Paul's Hospital Millennium Medical College", code: 'SPHMMC-ETH', region: 'Addis Ababa' },
+  { id: 'FAC-SHENEN', name: 'Shenen Gibe General Hospital', code: 'SGGH-ETH', region: 'Oromia' },
+  { id: 'FAC-AGARO', name: 'Agaro General Hospital', code: 'AGARO-ETH', region: 'Oromia' },
+  { id: 'FAC-NEKMT', name: 'Nekemte Specialized Hospital', code: 'NSH-ETH', region: 'Oromia' },
+  { id: 'FAC-GONDAR', name: 'University of Gondar Comprehensive Hospital', code: 'UOG-ETH', region: 'Amhara' },
+  { id: 'FAC-HAWASA', name: 'Hawassa University Comprehensive Referral Hosp', code: 'HUCSH-ETH', region: 'Sidama' },
+  { id: 'FAC-MEKELE', name: 'Ayder Comprehensive Specialized Hospital', code: 'AYDER-ETH', region: 'Tigray' },
+  { id: 'FAC-DESIE', name: 'Dessie Comprehensive Specialized Hospital', code: 'DCSH-ETH', region: 'Amhara' },
+  { id: 'FAC-ADAMA', name: 'Adama Hospital Medical College', code: 'AHMC-ETH', region: 'Oromia' }
+];
 
 // Department clinical roles defined by healthcare facility
 const HOSPITAL_ROLES = {
@@ -86,26 +104,24 @@ export default function LoginPage({
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
 
+  // Compute active facilities list with built-in fallback
+  const activeFacilities = (facilities && facilities.length > 0) ? facilities : DEFAULT_ETHIOPIAN_FACILITIES;
+
   // Default facility initialization
   useEffect(() => {
-    if (facilities.length > 0 && !selectedFacilityId) {
-      setSelectedFacilityId(facilities[0].id);
+    if (activeFacilities.length > 0 && !selectedFacilityId) {
+      setSelectedFacilityId(activeFacilities[0].id);
     }
-  }, [facilities]);
+  }, [activeFacilities]);
 
-  const selectedFacility = facilities.find(f => f.id === selectedFacilityId) || {
-    id: 'FAC-JUMC',
-    name: 'Jimma Medical Center (JMC)',
-    code: 'JMC-ETH',
-    region: 'Oromia'
-  };
+  const selectedFacility = activeFacilities.find(f => f.id === selectedFacilityId) || activeFacilities[0];
 
   const facilityRoles = getRolesForFacility(selectedFacilityId, selectedFacility?.name);
 
   // When facility changes, auto-select the first clinical role for that facility
   const handleFacilityChange = (facId) => {
     setSelectedFacilityId(facId);
-    const targetFac = facilities.find(f => f.id === facId);
+    const targetFac = activeFacilities.find(f => f.id === facId);
     const roles = getRolesForFacility(facId, targetFac?.name);
     if (roles.length > 0) {
       setSelectedRoleTitle(roles[0].roleTitle);
@@ -126,7 +142,7 @@ export default function LoginPage({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,7 +177,7 @@ export default function LoginPage({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/fayda-login', {
+      const res = await apiFetch('/api/auth/fayda-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -207,7 +223,7 @@ export default function LoginPage({
     }
     setFaydaOtpLoading(true);
     try {
-      const res = await fetch('/api/auth/fayda-otp/send', {
+      const res = await apiFetch('/api/auth/fayda-otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fayda_fin: faydaFin.trim(), facility_id: selectedFacilityId })
@@ -237,7 +253,7 @@ export default function LoginPage({
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/fayda-otp/verify', {
+      const res = await apiFetch('/api/auth/fayda-otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -268,7 +284,7 @@ export default function LoginPage({
     setForgotLoading(true);
 
     try {
-      const res = await fetch('/api/auth/forgot-password/request-otp', {
+      const res = await apiFetch('/api/auth/forgot-password/request-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: forgotIdentifier })
@@ -305,7 +321,7 @@ export default function LoginPage({
 
     setForgotLoading(true);
     try {
-      const res = await fetch('/api/auth/forgot-password/reset', {
+      const res = await apiFetch('/api/auth/forgot-password/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -683,7 +699,7 @@ export default function LoginPage({
                         1. Select Healthcare Institution (Hospital Name)
                       </label>
                       <span className="text-[10px] text-sky-400 font-mono font-bold">
-                        {facilities.length > 0 ? `${facilities.length} Facilities Online` : '20 Hospitals'}
+                        {activeFacilities.length > 0 ? `${activeFacilities.length} Facilities Online` : '20 Hospitals'}
                       </span>
                     </div>
                     <div className="relative">
@@ -693,7 +709,7 @@ export default function LoginPage({
                         onChange={(e) => handleFacilityChange(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-sky-500/40 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer shadow-inner"
                       >
-                        {facilities.map((fac) => (
+                        {activeFacilities.map((fac) => (
                           <option key={fac.id} value={fac.id} className="bg-slate-900 text-white font-medium">
                             {fac.name} · ({fac.code}) — {fac.region}
                           </option>
@@ -840,7 +856,7 @@ export default function LoginPage({
                       onChange={(e) => handleFacilityChange(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:outline-none"
                     >
-                      {facilities.map((fac) => (
+                      {activeFacilities.map((fac) => (
                         <option key={fac.id} value={fac.id} className="bg-slate-900 text-white">
                           {fac.name} ({fac.code})
                         </option>
