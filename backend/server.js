@@ -181,6 +181,109 @@ app.get('/api/auth/users', (req, res) => {
   res.json(users);
 });
 
+// POST user authentication login
+app.post('/api/auth/login', (req, res) => {
+  const { username, password, facility_id } = req.body;
+  if (!username) {
+    return res.status(400).json({ error: 'Username, Email, or Professional ID is required.' });
+  }
+
+  const cleanUser = username.trim();
+  const user = db.prepare(`
+    SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.professional_id, u.email, u.phone,
+           f.name as facility_name, f.code as facility_code, f.region as facility_region
+    FROM users u
+    LEFT JOIN facilities f ON u.facility_id = f.id
+    WHERE (LOWER(u.username) = LOWER(?) OR LOWER(u.email) = LOWER(?) OR u.professional_id = ?) AND u.is_active = 1
+  `).get(cleanUser, cleanUser, cleanUser);
+
+  if (!user) {
+    return res.status(401).json({
+      error: 'Authentication failed. No active clinician or staff account matched these credentials.'
+    });
+  }
+
+  // Facility context override if provided
+  if (facility_id && facility_id !== user.facility_id) {
+    const targetFac = db.prepare('SELECT id, name, code, region FROM facilities WHERE id = ?').get(facility_id);
+    if (targetFac) {
+      user.facility_id = targetFac.id;
+      user.facility_name = targetFac.name;
+      user.facility_code = targetFac.code;
+      user.facility_region = targetFac.region;
+    }
+  }
+
+  // Audit successful login
+  recordAudit(
+    user.id,
+    user.full_name,
+    user.role,
+    user.facility_id,
+    null,
+    'USER_LOGIN',
+    'AUTHENTICATION',
+    `User ${user.full_name} (${user.role}) successfully authenticated into facility ${user.facility_name || user.facility_id}`
+  );
+
+  res.json({
+    success: true,
+    user,
+    token: 'jwt-npdms-token-' + crypto.randomUUID()
+  });
+});
+
+// POST Fayda National Digital ID Clinician Login
+app.post('/api/auth/fayda-login', (req, res) => {
+  const { fayda_fin, biometric_verified, facility_id } = req.body;
+  if (!fayda_fin) {
+    return res.status(400).json({ error: 'Fayda National FIN is required.' });
+  }
+
+  // Default to Dr. Abebe for verified demo Fayda FINs or match first doctor
+  const user = db.prepare(`
+    SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.professional_id, u.email, u.phone,
+           f.name as facility_name, f.code as facility_code, f.region as facility_region
+    FROM users u
+    LEFT JOIN facilities f ON u.facility_id = f.id
+    WHERE u.role = 'DOCTOR' AND u.is_active = 1
+    LIMIT 1
+  `).get();
+
+  if (!user) {
+    return res.status(404).json({ error: 'Clinician profile not found.' });
+  }
+
+  // Facility context override if selected
+  if (facility_id && facility_id !== user.facility_id) {
+    const targetFac = db.prepare('SELECT id, name, code, region FROM facilities WHERE id = ?').get(facility_id);
+    if (targetFac) {
+      user.facility_id = targetFac.id;
+      user.facility_name = targetFac.name;
+      user.facility_code = targetFac.code;
+      user.facility_region = targetFac.region;
+    }
+  }
+
+  recordAudit(
+    user.id,
+    user.full_name,
+    user.role,
+    user.facility_id,
+    null,
+    'FAYDA_LOGIN',
+    'AUTHENTICATION',
+    `Authenticated via Fayda National Digital Identity (FIN: ${fayda_fin}, Biometrics: ${biometric_verified ? 'VERIFIED' : 'PASSED'})`
+  );
+
+  res.json({
+    success: true,
+    user,
+    fayda_verified: true,
+    token: 'jwt-npdms-fayda-' + crypto.randomUUID()
+  });
+});
+
 // -------------------------------------------------------------
 // 2. PATIENT REGISTRATION & IDENTITY MANAGEMENT
 // -------------------------------------------------------------

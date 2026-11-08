@@ -3,7 +3,7 @@ import React from 'react';
 import {
   Menu, PanelLeftClose, PanelLeft, Globe, Building2,
   UserCheck, ChevronDown, Wifi, WifiOff, UploadCloud,
-  Search, ShieldCheck, Sparkles, X
+  Search, ShieldCheck, Sparkles, X, LogOut
 } from 'lucide-react';
 
 export default function AppNavbar({
@@ -14,7 +14,8 @@ export default function AppNavbar({
   isOfflineMode, setIsOfflineMode,
   offlineQueue, handleSyncNow, syncing,
   searchTerm, setSearchTerm,
-  onOpenOfflineModal
+  onOpenOfflineModal,
+  onLogout
 }) {
   return (
     <header className="h-14 bg-white border-b border-slate-200 z-30 flex items-center justify-between px-3 sm:px-5 shrink-0 shadow-2xs">
@@ -185,6 +186,17 @@ export default function AppNavbar({
             አማ
           </button>
         </div>
+
+        {/* Logout Button */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            title="Sign out from NPDMS"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </header>
   );

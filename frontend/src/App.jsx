@@ -19,6 +19,7 @@ import MaternalChildModule from './components/MaternalChildModule';
 import AiClinicalHub from './components/AiClinicalHub';
 import HospitalNetworkModule from './components/HospitalNetworkModule';
 import EmergencyBloodBank from './components/EmergencyBloodBank';
+import LoginPage from './components/LoginPage';
 import { translations } from './i18n';
 import { CheckCircle2, Stethoscope, X } from 'lucide-react';
 
@@ -32,7 +33,14 @@ export default function App() {
   const [currentFacility, setCurrentFacility] = useState(null);
 
   const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('npdms_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('PAT-001');
@@ -133,15 +141,15 @@ export default function App() {
 
       setFacilities(dataF);
       if (dataF.length > 0 && !currentFacility) {
-        setCurrentFacility(dataF[0]); // Jimma Medical Center (JMC)
+        if (currentUser && currentUser.facility_id) {
+          const userFac = dataF.find(f => f.id === currentUser.facility_id);
+          setCurrentFacility(userFac || dataF[0]);
+        } else {
+          setCurrentFacility(dataF[0]); // Jimma Medical Center (JMC)
+        }
       }
 
       setUsers(dataU);
-      if (dataU.length > 0 && !currentUser) {
-        // Default to Dr. Abebe Tadesse (Specialist / Doctor)
-        const doctorUser = dataU.find(u => u.role === 'DOCTOR') || dataU[0];
-        setCurrentUser(doctorUser);
-      }
 
       setPatients(dataP);
       if (dataP.length > 0 && !selectedPatientId) {
@@ -158,6 +166,20 @@ export default function App() {
     loadInitialData();
   }, []);
 
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    if (user.facility_id && facilities.length > 0) {
+      const userFac = facilities.find(f => f.id === user.facility_id);
+      if (userFac) setCurrentFacility(userFac);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('npdms_auth_user');
+    localStorage.removeItem('npdms_auth_token');
+    setCurrentUser(null);
+  };
+
   const handleSelectPatient = (patientId) => {
     setSelectedPatientId(patientId);
     setActiveTab('timeline');
@@ -172,6 +194,17 @@ export default function App() {
       console.error(e);
     }
   };
+
+  if (!currentUser) {
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        facilities={facilities}
+        lang={lang}
+        setLang={setLang}
+      />
+    );
+  }
 
   return (
     <div className="h-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
@@ -196,6 +229,7 @@ export default function App() {
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         onOpenOfflineModal={() => setShowOfflineModal(true)}
+        onLogout={handleLogout}
       />
 
       {/* Sync Success Toast */}
