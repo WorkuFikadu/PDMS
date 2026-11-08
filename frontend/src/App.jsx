@@ -176,6 +176,21 @@ export default function App() {
       const userFac = facilities.find(f => f.id === user.facility_id);
       if (userFac) setCurrentFacility(userFac);
     }
+
+    // Role-based smart workspace landing
+    if (user.role === 'PHARMACIST') {
+      setActiveTab('pharmacy');
+    } else if (user.role === 'LAB_TECH') {
+      setActiveTab('diagnostics');
+    } else if (user.role === 'NURSE') {
+      setActiveTab('admissions');
+    } else if (user.role === 'REGISTRATION_OFFICER') {
+      setActiveTab('patients');
+    } else if (user.role === 'FACILITY_ADMIN' || user.role === 'SYSTEM_ADMIN') {
+      setActiveTab('hospital-network');
+    } else {
+      setActiveTab('timeline'); // DOCTOR / CONSULTANT lands directly on Longitudinal EHR
+    }
   };
 
   const handleLogout = () => {
