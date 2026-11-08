@@ -26,6 +26,8 @@ const db = new DatabaseSync(dbPath);
 // Enable WAL mode and foreign keys for performance and data integrity
 db.exec('PRAGMA foreign_keys = ON;');
 
+let isSeeding = false;
+
 function initDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS facilities (
@@ -410,20 +412,20 @@ function initDatabase() {
   `);
   console.log('NPDMS Database schema initialized successfully.');
 
+  if (isSeeding) return;
   try {
     const userRow = db.prepare('SELECT count(*) as count FROM users').get();
     const facRow = db.prepare('SELECT count(*) as count FROM facilities').get();
     if (!userRow || userRow.count === 0 || !facRow || facRow.count < 15) {
+      isSeeding = true;
       console.log('Seeding Ethiopian health system data (20 hospitals + clinicians + patients)...');
       const { seedDatabase } = require('./seed');
       seedDatabase();
+      isSeeding = false;
     }
   } catch (err) {
+    isSeeding = false;
     console.warn('Auto-seed check notice:', err.message);
-    try {
-      const { seedDatabase } = require('./seed');
-      seedDatabase();
-    } catch (e2) {}
   }
 }
 

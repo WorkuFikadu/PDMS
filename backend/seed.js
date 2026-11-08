@@ -3,8 +3,6 @@ const { db, initDatabase } = require('./database');
 const crypto = require('crypto');
 
 function seedDatabase() {
-  initDatabase();
-
   // Temporarily disable foreign keys for clean re-seed
   db.exec('PRAGMA foreign_keys = OFF;');
 
