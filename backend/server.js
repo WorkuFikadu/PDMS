@@ -28,8 +28,25 @@ function recordAudit(userId, userName, userRole, facilityId, patientId, action, 
 }
 
 // -------------------------------------------------------------
-// 1. HEALTH & DEMO USERS / FACILITIES
+// ROOT STATUS ROUTE & HEALTH CHECK
 // -------------------------------------------------------------
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'Ethiopia National Patient Data Management System (NPDMS) API',
+    institution: 'Federal Ministry of Health (FDRE - MOH)',
+    version: '1.0.0-MVP',
+    runtime: 'Vercel Serverless / Node.js ' + process.version,
+    endpoints: {
+      health: '/api/health',
+      facilities: '/api/facilities',
+      patients: '/api/patients',
+      routes: '/api/routes'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
@@ -3086,11 +3103,16 @@ app.get('/api/routes', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`=======================================================`);
-  console.log(` Ethiopian National Patient Data Management System (NPDMS)`);
-  console.log(` Backend Service running on port ${PORT}`);
-  console.log(` HL7 FHIR R4 Ready | Fayda Mock Service Active`);
-  console.log(` OTP Cross-Hospital Authorization Gateway ENABLED`);
-  console.log(`=======================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`=======================================================`);
+    console.log(` Ethiopian National Patient Data Management System (NPDMS)`);
+    console.log(` Backend Service running on port ${PORT}`);
+    console.log(` HL7 FHIR R4 Ready | Fayda Mock Service Active`);
+    console.log(` OTP Cross-Hospital Authorization Gateway ENABLED`);
+    console.log(`=======================================================`);
+  });
+}
+
+// Export Express app for Vercel Serverless Functions
+module.exports = app;

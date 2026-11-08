@@ -3,7 +3,24 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('node:path');
 const fs = require('node:fs');
 
-const dbPath = path.join(__dirname, 'npdms.sqlite');
+// In Vercel serverless, use /tmp for writable storage; locally use __dirname
+const isVercel = !!process.env.VERCEL;
+const dbDir = isVercel ? '/tmp' : __dirname;
+const dbPath = path.join(dbDir, 'npdms.sqlite');
+
+// On Vercel, copy existing seeded sqlite file if present in bundle
+if (isVercel && !fs.existsSync(dbPath)) {
+  const bundledDb = path.join(__dirname, 'npdms.sqlite');
+  if (fs.existsSync(bundledDb)) {
+    try {
+      fs.copyFileSync(bundledDb, dbPath);
+      console.log('Copied bundled npdms.sqlite to /tmp/npdms.sqlite');
+    } catch (e) {
+      console.warn('Could not copy bundled DB:', e.message);
+    }
+  }
+}
+
 const db = new DatabaseSync(dbPath);
 
 // Enable WAL mode and foreign keys for performance and data integrity
@@ -392,6 +409,17 @@ function initDatabase() {
     );
   `);
   console.log('NPDMS Database schema initialized successfully.');
+
+  try {
+    const facRow = db.prepare('SELECT count(*) as count FROM facilities').get();
+    if (!facRow || facRow.count === 0) {
+      console.log('Auto-seeding default Ethiopian health facilities and users...');
+      const { seedDatabase } = require('./seed');
+      seedDatabase();
+    }
+  } catch (err) {
+    console.warn('Auto-seed check notice:', err.message);
+  }
 }
 
 module.exports = {

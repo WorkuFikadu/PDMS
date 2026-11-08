@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "National Patient Data Management System (NPDMS) for Ethiopia - Jimma University Capstone",
   "author": "Worku Fikadu (Jimma University, Dept of Computer Science)",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "seed": "node backend/seed.js",
     "backend": "node backend/server.js",

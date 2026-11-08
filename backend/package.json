@@ -1,13 +1,17 @@
 {
-  "name": "backend",
+  "name": "npdms-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "NPDMS Ethiopia — National Patient Data Management System API",
+  "main": "server.js",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "seed": "node seed.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Worku Fikadu",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
