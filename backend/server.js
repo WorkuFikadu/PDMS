@@ -233,14 +233,134 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-// POST Fayda National Digital ID Clinician Login
+// -------------------------------------------------------------
+// FAYDA FIN — Step 1: Send OTP to practitioner's registered phone
+// POST /api/auth/fayda-otp/send
+// -------------------------------------------------------------
+const faydaOtpStore = new Map(); // fin -> { otp, expiresAt, userId, phone }
+
+app.post('/api/auth/fayda-otp/send', (req, res) => {
+  const { fayda_fin, facility_id } = req.body;
+  if (!fayda_fin || !fayda_fin.trim()) {
+    return res.status(400).json({ error: 'Fayda National ID (FIN) is required.' });
+  }
+
+  // Look up a practitioner (user) registered at this facility or globally
+  let user = null;
+  if (facility_id) {
+    user = db.prepare(`
+      SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.phone, u.email,
+             f.name as facility_name, f.code as facility_code, f.region as facility_region
+      FROM users u
+      LEFT JOIN facilities f ON u.facility_id = f.id
+      WHERE u.facility_id = ? AND u.is_active = 1
+      LIMIT 1
+    `).get(facility_id);
+  }
+  if (!user) {
+    user = db.prepare(`
+      SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.phone, u.email,
+             f.name as facility_name, f.code as facility_code, f.region as facility_region
+      FROM users u
+      LEFT JOIN facilities f ON u.facility_id = f.id
+      WHERE u.is_active = 1 LIMIT 1
+    `).get();
+  }
+
+  if (!user) {
+    return res.status(404).json({ error: 'No active practitioner account found. Contact your hospital administrator.' });
+  }
+
+  // Generate 6-digit OTP, valid 10 minutes
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+
+  faydaOtpStore.set(fayda_fin.trim(), { otp, expiresAt, userId: user.id, user });
+
+  // Mask phone for display
+  const rawPhone = user.phone || '+251911234567';
+  const masked = rawPhone.length >= 7
+    ? rawPhone.slice(0, 4) + ' ••• ' + rawPhone.slice(-4)
+    : '+251 ••• ••••';
+
+  // Simulate SMS delivery log
+  try {
+    db.prepare(`
+      INSERT INTO sms_logs (patient_id, phone_number, message_type, message_text, language, delivery_status, sent_at)
+      VALUES (NULL, ?, 'FAYDA_OTP', ?, 'en', 'SIMULATED', datetime('now'))
+    `).run(rawPhone, `[NPDMS Fayda Auth] Your one-time login code is ${otp}. Valid 10 minutes. Do not share.`);
+  } catch (_) { /* sms_logs table may not exist on older schemas */ }
+
+  console.log(`[FAYDA-OTP] FIN: ${fayda_fin} → OTP: ${otp} → Phone: ${rawPhone}`);
+
+  res.json({
+    success: true,
+    message: 'OTP sent to your registered Ethio Telecom number.',
+    maskedPhone: masked,
+    demoOtp: otp,          // Demo only — remove in production
+    expiresInMinutes: 10
+  });
+});
+
+// -------------------------------------------------------------
+// FAYDA FIN — Step 2: Verify OTP and issue session token
+// POST /api/auth/fayda-otp/verify
+// -------------------------------------------------------------
+app.post('/api/auth/fayda-otp/verify', (req, res) => {
+  const { fayda_fin, otp, biometric_verified, facility_id } = req.body;
+  if (!fayda_fin || !otp) {
+    return res.status(400).json({ error: 'FIN and OTP are required.' });
+  }
+
+  const record = faydaOtpStore.get(fayda_fin.trim());
+  if (!record) {
+    return res.status(400).json({ error: 'OTP not found. Please request a new code.' });
+  }
+  if (Date.now() > record.expiresAt) {
+    faydaOtpStore.delete(fayda_fin.trim());
+    return res.status(400).json({ error: 'OTP has expired. Please request a new code.' });
+  }
+  if (record.otp !== otp.trim()) {
+    return res.status(401).json({ error: 'Invalid OTP. Please check and try again.' });
+  }
+
+  // OTP valid — clean up and build session
+  faydaOtpStore.delete(fayda_fin.trim());
+  const user = { ...record.user };
+
+  // Facility context override
+  if (facility_id && facility_id !== user.facility_id) {
+    const targetFac = db.prepare('SELECT id, name, code, region FROM facilities WHERE id = ?').get(facility_id);
+    if (targetFac) {
+      user.facility_id = targetFac.id;
+      user.facility_name = targetFac.name;
+      user.facility_code = targetFac.code;
+      user.facility_region = targetFac.region;
+    }
+  }
+
+  recordAudit(
+    user.id, user.full_name, user.role, user.facility_id, null,
+    'FAYDA_OTP_LOGIN', 'AUTHENTICATION',
+    `Authenticated via Fayda FIN + OTP (FIN: ${fayda_fin}, Biometrics: ${biometric_verified ? 'VERIFIED' : 'OTP_ONLY'})`
+  );
+
+  res.json({
+    success: true,
+    user,
+    fayda_verified: true,
+    auth_method: biometric_verified ? 'FAYDA_BIOMETRIC_OTP' : 'FAYDA_OTP',
+    token: 'jwt-npdms-fayda-' + crypto.randomUUID()
+  });
+});
+
+// Legacy single-step Fayda login (kept for biometric bypass path)
 app.post('/api/auth/fayda-login', (req, res) => {
   const { fayda_fin, biometric_verified, facility_id } = req.body;
   if (!fayda_fin) {
     return res.status(400).json({ error: 'Fayda National FIN is required.' });
   }
 
-  // Default to Dr. Abebe for verified demo Fayda FINs or match first doctor
   const user = db.prepare(`
     SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.professional_id, u.email, u.phone,
            f.name as facility_name, f.code as facility_code, f.region as facility_region
@@ -254,7 +374,6 @@ app.post('/api/auth/fayda-login', (req, res) => {
     return res.status(404).json({ error: 'Clinician profile not found.' });
   }
 
-  // Facility context override if selected
   if (facility_id && facility_id !== user.facility_id) {
     const targetFac = db.prepare('SELECT id, name, code, region FROM facilities WHERE id = ?').get(facility_id);
     if (targetFac) {
@@ -266,13 +385,8 @@ app.post('/api/auth/fayda-login', (req, res) => {
   }
 
   recordAudit(
-    user.id,
-    user.full_name,
-    user.role,
-    user.facility_id,
-    null,
-    'FAYDA_LOGIN',
-    'AUTHENTICATION',
+    user.id, user.full_name, user.role, user.facility_id, null,
+    'FAYDA_LOGIN', 'AUTHENTICATION',
     `Authenticated via Fayda National Digital Identity (FIN: ${fayda_fin}, Biometrics: ${biometric_verified ? 'VERIFIED' : 'PASSED'})`
   );
 

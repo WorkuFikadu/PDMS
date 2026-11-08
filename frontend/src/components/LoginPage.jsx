@@ -61,6 +61,13 @@ export default function LoginPage({
   const [biometricScanning, setBiometricScanning] = useState(false);
   const [biometricSuccess, setBiometricSuccess] = useState(false);
 
+  // Fayda OTP flow state
+  const [faydaStep, setFaydaStep] = useState(1); // 1=enter FIN, 2=enter OTP
+  const [faydaOtp, setFaydaOtp] = useState('');
+  const [faydaMaskedPhone, setFaydaMaskedPhone] = useState('');
+  const [faydaDemoOtp, setFaydaDemoOtp] = useState('');
+  const [faydaOtpLoading, setFaydaOtpLoading] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -189,6 +196,70 @@ export default function LoginPage({
         handleFaydaLogin(fin, true);
       }, 500);
     }, 1200);
+  };
+
+  // ── Fayda OTP Step 1: Send OTP to registered phone
+  const handleFaydaSendOtp = async () => {
+    setErrorMsg('');
+    if (!faydaFin.trim()) {
+      setErrorMsg('Please enter your 12-digit Fayda National ID (FIN).');
+      return;
+    }
+    setFaydaOtpLoading(true);
+    try {
+      const res = await fetch('/api/auth/fayda-otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fayda_fin: faydaFin.trim(), facility_id: selectedFacilityId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Failed to send OTP. Try again.');
+      } else {
+        setFaydaMaskedPhone(data.maskedPhone || '+251 ••• ••••');
+        setFaydaDemoOtp(data.demoOtp || '');
+        setFaydaStep(2);
+        setFaydaOtp('');
+      }
+    } catch {
+      setErrorMsg('Network error connecting to Fayda identity service.');
+    } finally {
+      setFaydaOtpLoading(false);
+    }
+  };
+
+  // ── Fayda OTP Step 2: Verify OTP and login
+  const handleFaydaVerifyOtp = async () => {
+    setErrorMsg('');
+    if (!faydaOtp.trim() || faydaOtp.length < 6) {
+      setErrorMsg('Please enter the 6-digit OTP sent to your phone.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/fayda-otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fayda_fin: faydaFin.trim(),
+          otp: faydaOtp.trim(),
+          facility_id: selectedFacilityId,
+          biometric_verified: false
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'OTP verification failed.');
+      } else {
+        localStorage.setItem('npdms_auth_user', JSON.stringify(data.user));
+        if (data.token) localStorage.setItem('npdms_auth_token', data.token);
+        onLoginSuccess(data.user);
+      }
+    } catch {
+      setErrorMsg('Network error verifying OTP.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRequestResetOtp = async (e) => {
@@ -755,10 +826,11 @@ export default function LoginPage({
                 </form>
               )}
 
-              {/* TAB 2: FAYDA NATIONAL ID & BIOMETRIC AUTH */}
+              {/* TAB 2: FAYDA NATIONAL ID + OTP AUTH */}
               {authMode === 'FAYDA' && (
                 <div className="space-y-4">
-                  {/* Active Hospital */}
+
+                  {/* Assigned Healthcare Facility */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-300 mb-1">
                       Assigned Healthcare Facility
@@ -776,72 +848,173 @@ export default function LoginPage({
                     </select>
                   </div>
 
-                  {/* Fayda FIN Input */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                      12-Digit Fayda National Digital ID (FIN)
-                    </label>
-                    <div className="relative">
-                      <QrCode className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={faydaFin}
-                        onChange={(e) => setFaydaFin(e.target.value)}
-                        placeholder="1985-7821-4923"
-                        className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Optical Fingerprint Scanner */}
-                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-3 text-center">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                        <Fingerprint className="w-4 h-4 text-indigo-400" />
-                        MOSIP Fayda Biometric Scanner
-                      </span>
-                      <span className={`text-[10px] font-bold uppercase ${biometricScanning ? 'text-amber-400 animate-pulse' : biometricSuccess ? 'text-emerald-400' : 'text-slate-500'}`}>
-                        {biometricScanning ? 'Verifying Minutiae...' : biometricSuccess ? 'Matched 99.8%' : 'Scanner Ready'}
-                      </span>
-                    </div>
-
-                    <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center transition-all ${
-                      biometricScanning
-                        ? 'bg-amber-500/20 text-amber-400 ring-4 ring-amber-400/40 animate-pulse'
-                        : biometricSuccess
-                        ? 'bg-emerald-500/20 text-emerald-400 ring-4 ring-emerald-400/40'
-                        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                    }`}>
-                      <Fingerprint className={`w-9 h-9 ${biometricScanning ? 'animate-bounce' : ''}`} />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="text-xs font-bold text-white">
-                        {biometricScanning ? 'Reading Right Index Finger...' : biometricSuccess ? 'Practitioner Identity Verified!' : 'Touch Fingerprint Sensor to Sign In'}
+                  {/* ── STEP 1: Enter FIN ── */}
+                  {faydaStep === 1 && (
+                    <div className="space-y-4">
+                      {/* FIN Input */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+                          <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+                          Fayda National Digital ID (FIN / FAN)
+                        </label>
+                        <div className="relative">
+                          <QrCode className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={faydaFin}
+                            onChange={(e) => setFaydaFin(e.target.value)}
+                            placeholder="e.g. 1985-7821-4923"
+                            className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-indigo-500/30 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Your 12-digit Fayda National ID registered with the FDRE National ID Program
+                        </p>
                       </div>
-                      <p className="text-[10px] text-slate-400">
-                        Cryptographically matches biometric token with National ID Division
-                      </p>
+
+                      {/* Send OTP button */}
+                      <button
+                        type="button"
+                        disabled={faydaOtpLoading || !faydaFin.trim()}
+                        onClick={handleFaydaSendOtp}
+                        className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {faydaOtpLoading ? (
+                          <span className="animate-pulse">Sending OTP via Ethio Telecom...</span>
+                        ) : (
+                          <>
+                            <span>📱 Send OTP to Registered Phone</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+
+                      {/* Divider */}
+                      <div className="relative flex items-center gap-2">
+                        <div className="flex-1 h-px bg-slate-800" />
+                        <span className="text-[10px] text-slate-500 font-semibold">OR</span>
+                        <div className="flex-1 h-px bg-slate-800" />
+                      </div>
+
+                      {/* Biometric Scanner */}
+                      <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-3 text-center">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                            <Fingerprint className="w-4 h-4 text-indigo-400" />
+                            MOSIP Fayda Biometric Scanner
+                          </span>
+                          <span className={`text-[10px] font-bold uppercase ${biometricScanning ? 'text-amber-400 animate-pulse' : biometricSuccess ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {biometricScanning ? 'Verifying Minutiae...' : biometricSuccess ? 'Matched 99.8%' : 'Scanner Ready'}
+                          </span>
+                        </div>
+
+                        <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center transition-all ${
+                          biometricScanning
+                            ? 'bg-amber-500/20 text-amber-400 ring-4 ring-amber-400/40 animate-pulse'
+                            : biometricSuccess
+                            ? 'bg-emerald-500/20 text-emerald-400 ring-4 ring-emerald-400/40'
+                            : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                        }`}>
+                          <Fingerprint className={`w-9 h-9 ${biometricScanning ? 'animate-bounce' : ''}`} />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="text-xs font-bold text-white">
+                            {biometricScanning ? 'Reading Right Index Finger...' : biometricSuccess ? 'Practitioner Identity Verified!' : 'Touch Fingerprint Sensor to Sign In'}
+                          </div>
+                          <p className="text-[10px] text-slate-400">
+                            Cryptographically matches biometric token with National ID Division
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={biometricScanning || loading}
+                          onClick={() => handleSimulateBiometric(faydaFin || '1985-7821-4923')}
+                          className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
+                        >
+                          {biometricScanning ? 'Scanning...' : '👆 Authenticate Practitioner Biometric Thumbprint'}
+                        </button>
+                      </div>
                     </div>
+                  )}
 
-                    <button
-                      type="button"
-                      disabled={biometricScanning || loading}
-                      onClick={() => handleSimulateBiometric('1985-7821-4923')}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
-                    >
-                      {biometricScanning ? 'Scanning...' : '👆 Authenticate Practitioner Biometric Thumbprint'}
-                    </button>
-                  </div>
+                  {/* ── STEP 2: Enter OTP ── */}
+                  {faydaStep === 2 && (
+                    <div className="space-y-4">
 
-                  <button
-                    type="button"
-                    onClick={() => handleFaydaLogin(faydaFin, false)}
-                    disabled={loading}
-                    className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer"
-                  >
-                    Verify via FIN Lookup Only
-                  </button>
+                      {/* OTP sent notice */}
+                      <div className="p-4 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 space-y-1.5">
+                        <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs">
+                          <span>📱</span>
+                          <span>OTP Sent via Ethio Telecom SMS</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300">
+                          A 6-digit code has been sent to <span className="font-mono font-bold text-white">{faydaMaskedPhone}</span> linked to your Fayda FIN.
+                        </p>
+                        <p className="text-[10px] text-slate-500">Valid for 10 minutes · Do not share this code</p>
+                        {faydaDemoOtp && (
+                          <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center gap-2">
+                            <span className="text-amber-300 text-[10px] font-bold">🔔 DEMO OTP:</span>
+                            <span className="font-mono font-black text-amber-200 text-sm tracking-widest">{faydaDemoOtp}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* OTP input */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                          Enter 6-Digit OTP
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={faydaOtp}
+                          onChange={(e) => setFaydaOtp(e.target.value.replace(/\D/g, ''))}
+                          placeholder="• • • • • •"
+                          className="w-full px-4 py-3 bg-slate-950 border border-indigo-500/40 rounded-xl text-center text-2xl font-mono font-black text-white tracking-[0.5em] placeholder-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+
+                      {/* Verify button */}
+                      <button
+                        type="button"
+                        disabled={loading || faydaOtp.length < 6}
+                        onClick={handleFaydaVerifyOtp}
+                        className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {loading ? (
+                          <span className="animate-pulse">Verifying with Fayda Registry...</span>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Verify OTP & Sign In</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Resend / Back */}
+                      <div className="flex items-center justify-between text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => { setFaydaStep(1); setFaydaOtp(''); setErrorMsg(''); }}
+                          className="text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer transition"
+                        >
+                          <RotateCcw className="w-3 h-3" /> Back / Change FIN
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleFaydaSendOtp}
+                          disabled={faydaOtpLoading}
+                          className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer transition disabled:opacity-50"
+                        >
+                          {faydaOtpLoading ? 'Resending...' : 'Resend OTP'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
             </div>
