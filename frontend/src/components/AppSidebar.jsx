@@ -3,7 +3,7 @@ import React from 'react';
 import {
   Users, KeyRound, Sparkles, Activity, Hospital, Bed,
   Share2, Calendar, Baby, Pill, FlaskConical, ShieldAlert,
-  Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network
+  Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network, Droplets
 } from 'lucide-react';
 
 export default function AppSidebar({
@@ -36,7 +36,8 @@ export default function AppSidebar({
       title: 'Hospital Services',
       items: [
         { id: 'pharmacy', label: t.navPharmacy, icon: Pill },
-        { id: 'diagnostics', label: t.navDiagnostics, icon: FlaskConical }
+        { id: 'diagnostics', label: t.navDiagnostics, icon: FlaskConical },
+        { id: 'blood-bank', label: 'Emergency Blood Bank', icon: Droplets, badge: 'GRID', badgeColor: 'bg-rose-600 text-white animate-pulse' }
       ]
     },
     {

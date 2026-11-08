@@ -360,6 +360,36 @@ function initDatabase() {
       sent_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (patient_id) REFERENCES patients(id)
     );
+
+    -- NATIONAL BLOOD INVENTORY & EMERGENCY NETWORK
+    CREATE TABLE IF NOT EXISTS blood_inventory (
+      id TEXT PRIMARY KEY,
+      facility_id TEXT NOT NULL,
+      blood_group TEXT NOT NULL, -- A+, A-, B+, B-, AB+, AB-, O+, O-
+      units_available INTEGER DEFAULT 0,
+      component_type TEXT DEFAULT 'WHOLE_BLOOD', -- WHOLE_BLOOD, PRBC, FFP, PLATELETS
+      storage_location TEXT,
+      last_updated TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (facility_id) REFERENCES facilities(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS blood_requests (
+      id TEXT PRIMARY KEY,
+      requesting_facility_id TEXT NOT NULL,
+      fulfilling_facility_id TEXT,
+      patient_id TEXT,
+      blood_group TEXT NOT NULL,
+      units_requested INTEGER NOT NULL,
+      urgency_level TEXT DEFAULT 'CRITICAL', -- STAT_EMERGENCY, URGENT, ROUTINE
+      clinical_indication TEXT,
+      status TEXT DEFAULT 'PENDING', -- PENDING, APPROVED, IN_TRANSIT, FULFILLED, REJECTED
+      requested_by TEXT,
+      requested_at TEXT DEFAULT (datetime('now')),
+      fulfilled_at TEXT,
+      FOREIGN KEY (requesting_facility_id) REFERENCES facilities(id),
+      FOREIGN KEY (fulfilling_facility_id) REFERENCES facilities(id),
+      FOREIGN KEY (patient_id) REFERENCES patients(id)
+    );
   `);
   console.log('NPDMS Database schema initialized successfully.');
 }

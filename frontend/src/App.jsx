@@ -18,6 +18,7 @@ import AppointmentsModule from './components/AppointmentsModule';
 import MaternalChildModule from './components/MaternalChildModule';
 import AiClinicalHub from './components/AiClinicalHub';
 import HospitalNetworkModule from './components/HospitalNetworkModule';
+import EmergencyBloodBank from './components/EmergencyBloodBank';
 import { translations } from './i18n';
 import { CheckCircle2, Stethoscope, X } from 'lucide-react';
 
@@ -327,6 +328,15 @@ export default function App() {
                   <DiagnosticsModule
                     currentFacility={currentFacility}
                     currentUser={currentUser}
+                    t={t}
+                  />
+                )}
+
+                {activeTab === 'blood-bank' && (
+                  <EmergencyBloodBank
+                    currentFacility={currentFacility}
+                    currentUser={currentUser}
+                    patients={patients}
                     t={t}
                   />
                 )}

@@ -1928,6 +1928,174 @@ app.post('/api/sync/batch', (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 8J. NATIONAL BLOOD BANK & EMERGENCY NETWORK
+// -------------------------------------------------------------
+// Auto-seed blood inventory if empty
+function ensureBloodInventorySeeded() {
+  try {
+    const count = db.prepare('SELECT COUNT(*) as c FROM blood_inventory').get().c;
+    if (count === 0) {
+      const groups = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+      const facilities = ['FAC-JUMC', 'FAC-TASH', 'FAC-SHENEN', 'FAC-AGARO'];
+      const defaultStock = {
+        'FAC-JUMC':   { 'O+': 42, 'O-': 8, 'A+': 35, 'A-': 5, 'B+': 28, 'B-': 4, 'AB+': 15, 'AB-': 2 },
+        'FAC-TASH':   { 'O+': 65, 'O-': 14,'A+': 48, 'A-': 9, 'B+': 36, 'B-': 6, 'AB+': 22, 'AB-': 4 },
+        'FAC-SHENEN': { 'O+': 16, 'O-': 3, 'A+': 12, 'A-': 2, 'B+': 10, 'B-': 1, 'AB+': 5,  'AB-': 1 },
+        'FAC-AGARO':  { 'O+': 8,  'O-': 2, 'A+': 6,  'A-': 1, 'B+': 5,  'B-': 0, 'AB+': 3,  'AB-': 0 },
+      };
+
+      const insert = db.prepare(`
+        INSERT INTO blood_inventory (id, facility_id, blood_group, units_available, component_type, storage_location, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      `);
+
+      for (const facId of facilities) {
+        for (const bg of groups) {
+          const units = (defaultStock[facId] && defaultStock[facId][bg]) || 5;
+          const id = 'BLD-' + facId.replace('FAC-', '') + '-' + bg.replace('+', 'POS').replace('-', 'NEG');
+          insert.run(id, facId, bg, units, 'WHOLE_BLOOD', 'Central Cold Chain Refrigerator #' + (bg.includes('+') ? 'A1' : 'B2'));
+        }
+      }
+
+      // Seed 2 realistic active emergency blood transfer requests
+      db.prepare(`
+        INSERT INTO blood_requests (id, requesting_facility_id, fulfilling_facility_id, patient_id, blood_group, units_requested, urgency_level, clinical_indication, status, requested_by, requested_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-2 hours'))
+      `).run('REQ-BLD-01', 'FAC-AGARO', 'FAC-JUMC', 'PAT-001', 'O+', 2, 'CRITICAL', 'Post-trauma hypovolemic shock following severe motor injury', 'IN_TRANSIT', 'Dr. Tariku Bekele');
+
+      db.prepare(`
+        INSERT INTO blood_requests (id, requesting_facility_id, fulfilling_facility_id, patient_id, blood_group, units_requested, urgency_level, clinical_indication, status, requested_by, requested_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-30 minutes'))
+      `).run('REQ-BLD-02', 'FAC-SHENEN', 'FAC-JUMC', 'PAT-002', 'B+', 3, 'STAT_EMERGENCY', 'Acute post-partum hemorrhage during emergency Cesarean section', 'APPROVED', 'Dr. Chaltu Gemechu');
+    }
+  } catch (err) {
+    console.error('Error seeding blood inventory:', err.message);
+  }
+}
+ensureBloodInventorySeeded();
+
+app.get('/api/blood-bank/inventory', (req, res) => {
+  const { facility_id, blood_group } = req.query;
+  let sql = `
+    SELECT b.*, f.name as facility_name, f.code as facility_code, f.region as facility_region
+    FROM blood_inventory b
+    JOIN facilities f ON b.facility_id = f.id
+  `;
+  const conditions = [];
+  const params = [];
+
+  if (facility_id) {
+    conditions.push('b.facility_id = ?');
+    params.push(facility_id);
+  }
+  if (blood_group) {
+    conditions.push('b.blood_group = ?');
+    params.push(blood_group);
+  }
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+  sql += ' ORDER BY b.units_available DESC';
+
+  const inventory = db.prepare(sql).all(...params);
+  res.json(inventory);
+});
+
+app.get('/api/blood-bank/summary', (req, res) => {
+  const summary = db.prepare(`
+    SELECT blood_group, SUM(units_available) as total_units,
+           COUNT(DISTINCT facility_id) as facilities_stocked
+    FROM blood_inventory
+    GROUP BY blood_group
+    ORDER BY total_units DESC
+  `).all();
+
+  const totalNetworkUnits = db.prepare('SELECT SUM(units_available) as total FROM blood_inventory').get().total || 0;
+  const criticalShortages = summary.filter(s => s.total_units < 15);
+
+  res.json({
+    totalNetworkUnits,
+    groups: summary,
+    criticalShortagesCount: criticalShortages.length,
+    criticalShortages
+  });
+});
+
+app.get('/api/blood-bank/requests', (req, res) => {
+  const requests = db.prepare(`
+    SELECT r.*,
+      rf.name as requesting_facility_name, rf.code as requesting_facility_code,
+      ff.name as fulfilling_facility_name, ff.code as fulfilling_facility_code,
+      p.first_name as patient_first_name, p.father_name as patient_father_name, p.npdms_id
+    FROM blood_requests r
+    JOIN facilities rf ON r.requesting_facility_id = rf.id
+    LEFT JOIN facilities ff ON r.fulfilling_facility_id = ff.id
+    LEFT JOIN patients p ON r.patient_id = p.id
+    ORDER BY r.requested_at DESC
+  `).all();
+  res.json(requests);
+});
+
+app.post('/api/blood-bank/request', (req, res) => {
+  const {
+    requesting_facility_id, fulfilling_facility_id, patient_id,
+    blood_group, units_requested, urgency_level, clinical_indication, requested_by
+  } = req.body;
+
+  if (!requesting_facility_id || !blood_group || !units_requested) {
+    return res.status(400).json({ error: 'Requesting facility, blood group, and units are required.' });
+  }
+
+  const id = 'REQ-BLD-' + crypto.randomUUID().slice(0, 6).toUpperCase();
+
+  db.prepare(`
+    INSERT INTO blood_requests (
+      id, requesting_facility_id, fulfilling_facility_id, patient_id, blood_group,
+      units_requested, urgency_level, clinical_indication, status, requested_by, requested_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, datetime('now'))
+  `).run(
+    id,
+    requesting_facility_id,
+    fulfilling_facility_id || 'FAC-JUMC',
+    patient_id || null,
+    blood_group,
+    parseInt(units_requested),
+    urgency_level || 'CRITICAL',
+    clinical_indication || 'Emergency Clinical Transfusion',
+    requested_by || 'Emergency Clinician'
+  );
+
+  const created = db.prepare('SELECT * FROM blood_requests WHERE id = ?').get(id);
+  res.status(201).json(created);
+});
+
+app.put('/api/blood-bank/requests/:id', (req, res) => {
+  const { status, fulfilling_facility_id } = req.body;
+  const existing = db.prepare('SELECT * FROM blood_requests WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Blood request not found.' });
+
+  db.prepare(`
+    UPDATE blood_requests SET
+      status = COALESCE(?, status),
+      fulfilling_facility_id = COALESCE(?, fulfilling_facility_id),
+      fulfilled_at = CASE WHEN ? = 'FULFILLED' THEN datetime('now') ELSE fulfilled_at END
+    WHERE id = ?
+  `).run(status || null, fulfilling_facility_id || null, status || '', req.params.id);
+
+  // If fulfilled, deduct units from fulfilling facility
+  if (status === 'FULFILLED' && existing.fulfilling_facility_id) {
+    db.prepare(`
+      UPDATE blood_inventory
+      SET units_available = MAX(0, units_available - ?), last_updated = datetime('now')
+      WHERE facility_id = ? AND blood_group = ?
+    `).run(existing.units_requested, existing.fulfilling_facility_id, existing.blood_group);
+  }
+
+  const updated = db.prepare('SELECT * FROM blood_requests WHERE id = ?').get(req.params.id);
+  res.json(updated);
+});
+
+// -------------------------------------------------------------
 // 9. EMERGENCY "BREAK-GLASS" PROTOCOL
 // -------------------------------------------------------------
 app.post('/api/emergency/break-glass', (req, res) => {

@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import {
   Search, UserPlus, ShieldCheck, AlertCircle, AlertTriangle,
   HeartPulse, Phone, MapPin, Eye, CheckCircle2, X, Users,
-  Building2, Activity, Sparkles, KeyRound
+  Building2, Activity, Sparkles, KeyRound, QrCode, Fingerprint,
+  Camera, Printer, Download, Check, Truck
 } from 'lucide-react';
+import DigitalHealthCardModal from './DigitalHealthCardModal';
 
 export default function PatientRegistry({
   patients, loading, onSelectPatient, onRefresh,
@@ -16,6 +18,11 @@ export default function PatientRegistry({
   const setSearchTerm = setExternalSearchTerm || setInternalSearchTerm;
   const [filterType, setFilterType] = useState('ALL');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [selectedCardPatient, setSelectedCardPatient] = useState(null);
+  const [showTriageScanner, setShowTriageScanner] = useState(false);
+  const [verificationMode, setVerificationMode] = useState('FIN'); // 'FIN' | 'QR' | 'BIOMETRIC'
+  const [biometricScanning, setBiometricScanning] = useState(false);
+  const [biometricProgress, setBiometricProgress] = useState(0);
 
   // Registration Form State
   const [faydaInput, setFaydaInput] = useState('');
@@ -64,9 +71,11 @@ export default function PatientRegistry({
     return true;
   });
 
-  // Fayda Lookup Function
-  const handleFaydaLookup = async () => {
-    if (!faydaInput.trim()) return;
+  // Fayda Unified Lookup Function (FIN, QR, or Biometric)
+  const executeFaydaLookup = async (finToLookup) => {
+    const fin = (finToLookup || faydaInput).trim();
+    if (!fin) return;
+    setFaydaInput(fin);
     setFaydaLoading(true);
     setFaydaError('');
     setFaydaResult(null);
@@ -75,7 +84,7 @@ export default function PatientRegistry({
       const res = await fetch('/api/fayda/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fin: faydaInput.trim() })
+        body: JSON.stringify({ fin })
       });
       const data = await res.json();
 
@@ -93,6 +102,7 @@ export default function PatientRegistry({
           father_name_amharic: data.data.father_name_amharic || '',
           date_of_birth: data.data.date_of_birth,
           gender: data.data.gender,
+          blood_type: data.data.blood_type || prev.blood_type,
           phone_number: data.data.phone_number || prev.phone_number,
           region: data.data.region || prev.region,
           zone_woreda: `${data.data.zone || ''} / ${data.data.woreda || ''}`,
@@ -104,6 +114,26 @@ export default function PatientRegistry({
     } finally {
       setFaydaLoading(false);
     }
+  };
+
+  const handleFaydaLookup = () => executeFaydaLookup(faydaInput);
+
+  const handleBiometricScan = (fin = '1985-7821-4923') => {
+    setBiometricScanning(true);
+    setFaydaError('');
+    setFaydaResult(null);
+    setBiometricProgress(20);
+
+    let progress = 20;
+    const interval = setInterval(() => {
+      progress += 25;
+      setBiometricProgress(progress);
+      if (progress >= 100) {
+        clearInterval(interval);
+        setBiometricScanning(false);
+        executeFaydaLookup(fin);
+      }
+    }, 180);
   };
 
   // Submit Patient Registration
@@ -278,19 +308,30 @@ export default function PatientRegistry({
           </button>
         </div>
 
-        {/* Register Button */}
-        <button
-          onClick={() => {
-            setShowRegisterModal(true);
-            setFaydaResult(null);
-            setFaydaError('');
-            setDuplicateWarning(null);
-          }}
-          className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
-        >
-          <UserPlus className="w-3.5 h-3.5" />
-          <span>{t.registerPatient}</span>
-        </button>
+        {/* Action Buttons: Triage QR Scanner + Register */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowTriageScanner(true)}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap border border-slate-200"
+            title="Scan Patient Health Card / Fayda QR in Reception"
+          >
+            <QrCode className="w-3.5 h-3.5 text-sky-600" />
+            <span>Scan Triage QR</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowRegisterModal(true);
+              setFaydaResult(null);
+              setFaydaError('');
+              setDuplicateWarning(null);
+            }}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>{t.registerPatient}</span>
+          </button>
+        </div>
       </div>
 
       {/* Patient Table */}
@@ -383,13 +424,23 @@ export default function PatientRegistry({
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => onSelectPatient(patient.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-sky-600 hover:text-white text-slate-700 font-semibold rounded-lg transition text-xs shadow-2xs"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          {t.viewChart}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedCardPatient(patient)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-700 border border-slate-200 hover:border-sky-300 font-semibold rounded-lg transition text-xs cursor-pointer shadow-2xs"
+                            title="View & Print Official Digital Health Card with QR Code"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-sky-600" />
+                            <span className="hidden sm:inline">ID Card</span>
+                          </button>
+                          <button
+                            onClick={() => onSelectPatient(patient.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-sky-600 hover:text-white text-slate-700 font-semibold rounded-lg transition text-xs shadow-2xs cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            {t.viewChart}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -420,38 +471,198 @@ export default function PatientRegistry({
 
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-              {/* Step 1: Fayda Digital ID Lookup Simulator */}
-              <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl space-y-3">
-                <div className="flex items-center gap-2 text-sky-900 font-semibold text-xs">
-                  <ShieldCheck className="w-4 h-4 text-sky-600" />
-                  <span>{t.verifyWithFayda}</span>
-                </div>
-                <p className="text-xs text-slate-600">
-                  {t.faydaFinPrompt}. Quick Demo FINs: <button type="button" onClick={() => setFaydaInput('1985-7821-4923')} className="underline text-sky-700 font-mono">1985-7821-4923</button> (Kemal), <button type="button" onClick={() => setFaydaInput('2001-3847-1920')} className="underline text-sky-700 font-mono">2001-3847-1920</button> (Chaltu), <button type="button" onClick={() => setFaydaInput('1992-6612-4410')} className="underline text-sky-700 font-mono">1992-6612-4410</button> (Gudeta).
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={faydaInput}
-                    onChange={(e) => setFaydaInput(e.target.value)}
-                    placeholder="e.g. 1985-7821-4923"
-                    className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-mono focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleFaydaLookup}
-                    disabled={faydaLoading}
-                    className="px-4 py-1.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
-                  >
-                    {faydaLoading ? 'Verifying...' : t.lookupFayda}
-                  </button>
+              {/* Step 1: Fayda Digital ID Lookup & Biometric Verification */}
+              <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sky-900 font-bold text-xs">
+                    <ShieldCheck className="w-4 h-4 text-sky-600" />
+                    <span>Fayda Ethiopian National Digital ID Verification</span>
+                  </div>
+
+                  {/* 3 Verification Mode Pills */}
+                  <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-sky-200 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMode('FIN')}
+                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                        verificationMode === 'FIN' ? 'bg-sky-600 text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      ⌨️ FIN Lookup
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMode('QR')}
+                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                        verificationMode === 'QR' ? 'bg-sky-600 text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Scan Card QR</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMode('BIOMETRIC')}
+                      className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                        verificationMode === 'BIOMETRIC' ? 'bg-sky-600 text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Fingerprint className="w-3.5 h-3.5" />
+                      <span>Biometric Fingerprint</span>
+                    </button>
+                  </div>
                 </div>
 
+                {/* Mode A: FIN Manual Input */}
+                {verificationMode === 'FIN' && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-600">
+                      {t.faydaFinPrompt}. Quick Demo FINs:{' '}
+                      <button type="button" onClick={() => executeFaydaLookup('1985-7821-4923')} className="underline text-sky-700 font-mono font-bold cursor-pointer">1985-7821-4923</button> (Kemal),{' '}
+                      <button type="button" onClick={() => executeFaydaLookup('2001-3847-1920')} className="underline text-sky-700 font-mono font-bold cursor-pointer">2001-3847-1920</button> (Chaltu),{' '}
+                      <button type="button" onClick={() => executeFaydaLookup('1992-6612-4410')} className="underline text-sky-700 font-mono font-bold cursor-pointer">1992-6612-4410</button> (Gudeta).
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={faydaInput}
+                        onChange={(e) => setFaydaInput(e.target.value)}
+                        placeholder="e.g. 1985-7821-4923"
+                        className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleFaydaLookup}
+                        disabled={faydaLoading}
+                        className="px-4 py-1.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+                      >
+                        {faydaLoading ? 'Verifying...' : t.lookupFayda}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode B: QR Scanner Simulator */}
+                {verificationMode === 'QR' && (
+                  <div className="bg-white p-3 rounded-xl border border-sky-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-sky-600" />
+                        Optical Barcode & Fayda QR Scanner
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-mono font-bold">SCANNER READY</span>
+                    </div>
+                    <div className="relative border-2 border-dashed border-sky-300 rounded-xl p-4 bg-slate-900 text-center text-white overflow-hidden">
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        <QrCode className="w-10 h-10 text-sky-400 animate-pulse" />
+                        <p className="text-xs text-sky-200">Align physical Fayda National ID Card in front of terminal camera</p>
+                        <div className="flex flex-wrap justify-center gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => executeFaydaLookup('1985-7821-4923')}
+                            className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white font-mono rounded-lg text-[11px] font-bold transition cursor-pointer"
+                          >
+                            📷 Scan Kemal's Fayda QR
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => executeFaydaLookup('2001-3847-1920')}
+                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-mono rounded-lg text-[11px] font-bold transition cursor-pointer"
+                          >
+                            📷 Scan Chaltu's Fayda QR
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => executeFaydaLookup('1992-6612-4410')}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-mono rounded-lg text-[11px] font-bold transition cursor-pointer"
+                          >
+                            📷 Scan Gudeta's Fayda QR
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode C: Biometric Fingerprint Auth */}
+                {verificationMode === 'BIOMETRIC' && (
+                  <div className="bg-white p-3 rounded-xl border border-sky-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <Fingerprint className="w-4 h-4 text-indigo-600" />
+                        MOSIP Fayda Certified Biometric Optical Sensor
+                      </span>
+                      <span className={`text-[10px] font-bold uppercase ${biometricScanning ? 'text-amber-600 animate-pulse' : 'text-slate-400'}`}>
+                        {biometricScanning ? `Matching Minutiae (${biometricProgress}%)...` : 'Sensor Ready'}
+                      </span>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition ${
+                          biometricScanning
+                            ? 'bg-amber-100 text-amber-600 ring-4 ring-amber-400/40'
+                            : faydaResult
+                            ? 'bg-emerald-100 text-emerald-600 ring-4 ring-emerald-400/30'
+                            : 'bg-indigo-100 text-indigo-600'
+                        }`}>
+                          <Fingerprint className={`w-7 h-7 ${biometricScanning ? 'animate-bounce' : ''}`} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-800">
+                            {biometricScanning ? 'Reading Right Thumb Print...' : faydaResult ? 'Biometric Match Confirmed (99.8%)' : 'Place Patient Thumb on Scanner'}
+                          </div>
+                          <p className="text-[10px] text-slate-500">
+                            Matches template with FDRE National ID Authority Biometric Engine
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleBiometricScan('1985-7821-4923')}
+                          disabled={biometricScanning}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {biometricScanning ? 'Scanning...' : 'Scan Thumb (Kemal)'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBiometricScan('2001-3847-1920')}
+                          disabled={biometricScanning}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {biometricScanning ? 'Scanning...' : 'Scan Thumb (Chaltu)'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verified Fayda Result Badge */}
                 {faydaResult && (
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <div>
-                      <span className="font-bold">{t.faydaFound}:</span> {faydaResult.first_name} {faydaResult.father_name} ({faydaResult.first_name_amharic} {faydaResult.father_name_amharic}) - Verified Biometrics.
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 text-xs flex items-center gap-3 animate-in fade-in">
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 font-bold">
+                      <Check className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-extrabold text-sm">{faydaResult.first_name} {faydaResult.father_name}</span>
+                        {faydaResult.first_name_amharic && (
+                          <span className="text-slate-600 font-medium">({faydaResult.first_name_amharic} {faydaResult.father_name_amharic})</span>
+                        )}
+                        <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-200 text-emerald-800">
+                          Biometrics Verified
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-emerald-800 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span>FIN: <strong className="font-mono">{faydaResult.fin}</strong></span>
+                        <span>DOB: <strong>{faydaResult.date_of_birth}</strong></span>
+                        <span>Gender: <strong>{faydaResult.gender}</strong></span>
+                        <span>Blood: <strong>{faydaResult.blood_type || 'A+'}</strong></span>
+                        <span>Region: <strong>{faydaResult.region}</strong></span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -699,6 +910,78 @@ export default function PatientRegistry({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* DIGITAL HEALTH CARD MODAL */}
+      {selectedCardPatient && (
+        <DigitalHealthCardModal
+          patient={selectedCardPatient}
+          onClose={() => setSelectedCardPatient(null)}
+        />
+      )}
+
+      {/* QUICK TRIAGE QR / BARCODE SCANNER MODAL */}
+      {showTriageScanner && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4 text-xs animate-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-sky-600" />
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Hospital Triage QR Scanner</h3>
+                  <p className="text-[11px] text-slate-500">Scan physical card to pull longitudinal chart</p>
+                </div>
+              </div>
+              <button onClick={() => setShowTriageScanner(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative border-2 border-dashed border-sky-300 rounded-2xl p-6 bg-slate-900 text-center text-white overflow-hidden space-y-3">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-sky-500/20 border border-sky-400 flex items-center justify-center text-sky-400">
+                <QrCode className="w-8 h-8 animate-pulse" />
+              </div>
+              <div>
+                <span className="font-bold text-xs text-sky-300">Targeting Optical Scanner</span>
+                <p className="text-[11px] text-slate-400 mt-0.5">Place patient's Digital Health Pass or Fayda ID under scanner</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Simulate Triage Scan on Registered Patient:
+              </span>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {patients.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setShowTriageScanner(false);
+                      onSelectPatient(p.id);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50 transition cursor-pointer text-left"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900">{p.first_name} {p.father_name}</div>
+                      <div className="text-[10px] text-slate-500 font-mono">{p.npdms_id} · {p.fayda_fin || 'No Fayda'}</div>
+                    </div>
+                    <span className="px-2 py-1 bg-sky-600 text-white font-bold rounded-lg text-[10px]">
+                      Open Chart →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setShowTriageScanner(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+              >
+                Close Scanner
+              </button>
             </div>
           </div>
         </div>
