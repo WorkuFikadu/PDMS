@@ -2,14 +2,18 @@
 import React, { useState } from 'react';
 import {
   Search, UserPlus, ShieldCheck, AlertCircle, AlertTriangle,
-  HeartPulse, Phone, MapPin, Eye, CheckCircle2, X
+  HeartPulse, Phone, MapPin, Eye, CheckCircle2, X, Users,
+  Building2, Activity, Sparkles, KeyRound
 } from 'lucide-react';
 
 export default function PatientRegistry({
   patients, loading, onSelectPatient, onRefresh,
-  currentFacility, currentUser, t
+  currentFacility, currentUser, t,
+  searchTerm: externalSearchTerm, setSearchTerm: setExternalSearchTerm
 }) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const searchTerm = externalSearchTerm !== undefined ? externalSearchTerm : internalSearchTerm;
+  const setSearchTerm = setExternalSearchTerm || setInternalSearchTerm;
   const [filterType, setFilterType] = useState('ALL');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
@@ -144,90 +148,131 @@ export default function PatientRegistry({
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* NATIONAL FAYDA CORE PILLAR BANNER */}
-      <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 text-white rounded-2xl p-5 border border-sky-800/50 shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
-                CORE SYSTEM ARCHITECTURE
-              </span>
-              <span className="text-xs text-sky-300 font-semibold">
-                FDRE Ministry of Health • National Health Data Division
-              </span>
-            </div>
-            <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
-              One Patient • One Fayda Identity • Treated Anywhere, Stored in One Record
-            </h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              When a patient visits a primary clinic in Agaro, is referred to Jimma Medical Center (JMC), or undergoes surgery at Tikur Anbessa in Addis Ababa, all clinical histories, life-threatening allergies, and prescriptions are synchronized into a single, permanent longitudinal record anchored by their verified Ethiopian National Digital ID (Fayda).
-            </p>
-          </div>
+  const verifiedCount = patients.filter(p => p.fayda_status === 'VERIFIED').length;
+  const verifiedPercent = Math.round((verifiedCount / (patients.length || 1)) * 100);
 
-          {/* Quick Demo Test Fayda Pills */}
-          <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3 space-y-2 text-xs min-w-[260px]">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Quick Search by Fayda National ID:
-            </span>
-            <div className="flex flex-col gap-1.5">
-              <button
-                onClick={() => setSearchTerm('1985-7821-4923')}
-                className="text-left px-2.5 py-1.5 bg-slate-900/90 hover:bg-sky-900/60 text-sky-200 rounded-lg text-xs font-mono font-bold transition flex items-center justify-between"
-              >
-                <span>1985-7821-4923</span>
-                <span className="text-[10px] text-slate-400 font-sans font-normal">Kemal (2 Hospitals)</span>
-              </button>
-              <button
-                onClick={() => setSearchTerm('2001-9984-5512')}
-                className="text-left px-2.5 py-1.5 bg-slate-900/90 hover:bg-sky-900/60 text-sky-200 rounded-lg text-xs font-mono font-bold transition flex items-center justify-between"
-              >
-                <span>2001-9984-5512</span>
-                <span className="text-[10px] text-slate-400 font-sans font-normal">Chaltu (ANC / Surgery)</span>
-              </button>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* 1. TOP METRIC STATS ROW */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Total Patients</span>
+            <Users className="w-4 h-4 text-sky-600" />
           </div>
+          <div className="text-2xl font-black text-slate-900">{patients.length}</div>
+          <p className="text-[11px] text-slate-500 font-medium">National Master Index</p>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Fayda Verified</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="text-2xl font-black text-emerald-700">{verifiedPercent}%</div>
+          <p className="text-[11px] text-emerald-600/80 font-medium">{verifiedCount} of {patients.length} biometrically linked</p>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Active Hospitals</span>
+            <Building2 className="w-4 h-4 text-indigo-600" />
+          </div>
+          <div className="text-2xl font-black text-indigo-900">4 Facilities</div>
+          <p className="text-[11px] text-slate-500 font-medium">JMC, Shenen Gibe, Agaro, TASH</p>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Continuity Sync</span>
+            <Activity className="w-4 h-4 text-purple-600" />
+          </div>
+          <div className="text-2xl font-black text-purple-900">100%</div>
+          <p className="text-[11px] text-purple-700 font-medium">Longitudinal Health Spine</p>
         </div>
       </div>
 
-      {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+      {/* 2. COMPACT FAYDA NATIONAL ARCHITECTURE BAR WITH TEST CHIPS */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl px-4 py-2.5 border border-indigo-800/40 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 flex items-center justify-center font-bold text-xs shrink-0">
+            🇪🇹
+          </div>
+          <div>
+            <h3 className="font-extrabold text-xs text-white tracking-tight flex items-center gap-2">
+              One Patient • One Fayda Identity • Treated Anywhere, Stored in One Record
+            </h3>
+            <p className="text-[11px] text-slate-400 hidden sm:block">
+              Hospital treatments at Agaro, Jimma Medical Center, and Tikur Anbessa auto-consolidate into one file.
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Test Fayda FIN Chips */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] text-slate-400 font-bold uppercase hidden lg:inline">Quick FIN:</span>
+          <button
+            onClick={() => setSearchTerm('1985-7821-4923')}
+            className="px-2.5 py-1 bg-slate-800/90 hover:bg-sky-900/60 text-sky-300 border border-slate-700 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>1985-7821-4923</span>
+            <span className="text-[10px] text-slate-400 font-sans font-normal">(Kemal)</span>
+          </button>
+          <button
+            onClick={() => setSearchTerm('2001-9984-5512')}
+            className="px-2.5 py-1 bg-slate-800/90 hover:bg-sky-900/60 text-sky-300 border border-slate-700 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>2001-9984-5512</span>
+            <span className="text-[10px] text-slate-400 font-sans font-normal">(Chaltu)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. CLEAN UNIFIED SEARCH & FILTER BAR */}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={t.searchPlaceholder}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition"
+            className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition"
           />
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs">
           <button
             onClick={() => setFilterType('ALL')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition ${filterType === 'ALL' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer whitespace-nowrap ${
+              filterType === 'ALL' ? 'bg-slate-900 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
           >
             All Patients ({patients.length})
           </button>
           <button
             onClick={() => setFilterType('VERIFIED')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition ${filterType === 'VERIFIED' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer whitespace-nowrap ${
+              filterType === 'VERIFIED' ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+            }`}
           >
             Fayda Verified
           </button>
           <button
             onClick={() => setFilterType('UNLINKED')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition ${filterType === 'UNLINKED' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer whitespace-nowrap ${
+              filterType === 'UNLINKED' ? 'bg-amber-600 text-white shadow-2xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+            }`}
           >
-            Provisional / Unlinked
+            Provisional
           </button>
           <button
             onClick={() => setFilterType('EMERGENCY')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition ${filterType === 'EMERGENCY' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition cursor-pointer whitespace-nowrap ${
+              filterType === 'EMERGENCY' ? 'bg-rose-600 text-white shadow-2xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+            }`}
           >
             Emergency Trauma
           </button>
@@ -241,10 +286,10 @@ export default function PatientRegistry({
             setFaydaError('');
             setDuplicateWarning(null);
           }}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow-xs transition"
+          className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
         >
-          <UserPlus className="w-4 h-4" />
-          {t.registerPatient}
+          <UserPlus className="w-3.5 h-3.5" />
+          <span>{t.registerPatient}</span>
         </button>
       </div>
 
