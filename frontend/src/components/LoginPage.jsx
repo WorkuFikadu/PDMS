@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck, Lock, User, Building2, KeyRound, Fingerprint,
   QrCode, ArrowRight, CheckCircle2, AlertCircle, Eye, EyeOff,
-  Stethoscope, Sparkles, HeartPulse, Hospital, Shield, Globe
+  Stethoscope, Sparkles, HeartPulse, Hospital, Shield, Globe,
+  RotateCcw, MessageSquare, X, Check
 } from 'lucide-react';
 
 export default function LoginPage({
@@ -106,6 +107,91 @@ export default function LoginPage({
         handleFaydaLogin(fin, true);
       }, 500);
     }, 1200);
+  };
+
+  // Forgot Password State & Handlers
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: identify -> 2: otp & new pass -> 3: success
+  const [forgotIdentifier, setForgotIdentifier] = useState('dr_abebe');
+  const [forgotChannel, setForgotChannel] = useState('SMS'); // 'SMS' | 'FAYDA'
+  const [forgotMaskedPhone, setForgotMaskedPhone] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [demoOtp, setDemoOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+
+  const handleRequestResetOtp = async (e) => {
+    if (e) e.preventDefault();
+    setForgotError('');
+    setForgotLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/forgot-password/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: forgotIdentifier })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setForgotError(data.error || 'Failed to locate user account.');
+      } else {
+        setForgotMaskedPhone(data.maskedPhone || '+251 91 ••• 4567');
+        setDemoOtp(data.demoOtp || '123456');
+        setForgotStep(2);
+      }
+    } catch (err) {
+      setForgotError('Network error connecting to recovery service.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleConfirmReset = async (e) => {
+    if (e) e.preventDefault();
+    setForgotError('');
+
+    if (newPassword.length < 6) {
+      setForgotError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setForgotError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await fetch('/api/auth/forgot-password/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: forgotIdentifier,
+          otp: forgotOtp,
+          new_password: newPassword
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setForgotError(data.error || 'Password reset failed.');
+      } else {
+        setForgotSuccess(data.message);
+        setForgotStep(3);
+        // Pre-fill login password with the newly set password
+        setPassword(newPassword);
+        setUsername(forgotIdentifier);
+      }
+    } catch (err) {
+      setForgotError('Network error while resetting password.');
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   // Quick 1-click demo accounts
@@ -394,6 +480,24 @@ export default function LoginPage({
                     </div>
                   </div>
 
+                  {/* Forgot Password Action */}
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotModal(true);
+                        setForgotStep(1);
+                        setForgotIdentifier(username || 'dr_abebe');
+                        setForgotError('');
+                        setForgotSuccess('');
+                      }}
+                      className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold cursor-pointer transition flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Forgot password?</span>
+                    </button>
+                  </div>
+
                   {/* Submit Button */}
                   <button
                     type="submit"
@@ -545,6 +649,257 @@ export default function LoginPage({
           <span>Fayda MOSIP v1.2</span>
         </div>
       </footer>
+
+      {/* 4. FORGOT PASSWORD & RECOVERY MODAL */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4 animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Reset Staff Password</h3>
+                  <p className="text-[11px] text-slate-400">FDRE Ministry of Health Credential Recovery</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Banner */}
+            {forgotError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {/* STEP 1: Identify Account & Select Channel */}
+            {forgotStep === 1 && (
+              <form onSubmit={handleRequestResetOtp} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                    Enter Username, License ID, or Work Email
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={forgotIdentifier}
+                      onChange={(e) => setForgotIdentifier(e.target.value)}
+                      placeholder="e.g. dr_abebe or dr.abebe@jumc.edu.et"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Recovery Channel Selector */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-300">
+                    Verification Method
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForgotChannel('SMS')}
+                      className={`p-2.5 rounded-xl border text-left cursor-pointer transition ${
+                        forgotChannel === 'SMS'
+                          ? 'bg-sky-500/20 border-sky-500 text-sky-200'
+                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-sky-400" />
+                        <span>Ethio Telecom SMS</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Send 6-digit OTP code to registered phone</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setForgotChannel('FAYDA')}
+                      className={`p-2.5 rounded-xl border text-left cursor-pointer transition ${
+                        forgotChannel === 'FAYDA'
+                          ? 'bg-indigo-500/20 border-indigo-500 text-indigo-200'
+                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                      }`}
+                    >
+                      <div className="font-bold flex items-center gap-1.5">
+                        <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Fayda National ID</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Authorize recovery via National Digital ID</p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-2"
+                  >
+                    {forgotLoading ? (
+                      <span>Dispatching Code...</span>
+                    ) : (
+                      <>
+                        <span>Send Verification Code</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 2: Enter OTP & Set New Password */}
+            {forgotStep === 2 && (
+              <form onSubmit={handleConfirmReset} className="space-y-4 text-xs">
+                {/* Simulated Ethio Telecom SMS Toast Notification */}
+                <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Ethio Telecom SMS Received
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">Just Now</span>
+                  </div>
+                  <p className="text-[11px] text-slate-200 font-medium">
+                    "ETH-MOH: Your NPDMS verification code is <strong className="font-mono text-emerald-300 tracking-wider text-xs">{demoOtp}</strong>. Dispatched to {forgotMaskedPhone}."
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setForgotOtp(demoOtp)}
+                    className="text-[10px] font-bold text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                  >
+                    ⚡ Click to Auto-Fill Code ({demoOtp})
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                    6-Digit Verification Code (OTP)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    placeholder="Enter 6-digit code"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-center font-mono font-black text-sm tracking-widest text-sky-400 focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Min. 6 chars"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Confirm Password
+                    </label>
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showNewPassword}
+                      onChange={(e) => setShowNewPassword(e.target.checked)}
+                      className="rounded bg-slate-950 text-sky-600 border-slate-700"
+                    />
+                    <span>Show passwords</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRequestResetOtp()}
+                    className="text-sky-400 hover:text-sky-300 font-medium cursor-pointer"
+                  >
+                    Resend Code
+                  </button>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep(1)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="px-4 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-xs transition cursor-pointer"
+                  >
+                    {forgotLoading ? 'Updating Password...' : 'Save New Password & Sign In'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 3: Success Screen */}
+            {forgotStep === 3 && (
+              <div className="text-center py-4 space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Password Reset Complete!</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Your credentials have been securely updated across the National Health Spine.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer mt-2"
+                >
+                  Return to Sign In (Auto-filled)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

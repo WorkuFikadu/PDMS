@@ -285,6 +285,114 @@ app.post('/api/auth/fayda-login', (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 1B. FORGOT PASSWORD & PRACTITIONER RECOVERY API
+// -------------------------------------------------------------
+const passwordResetOtps = new Map();
+
+app.post('/api/auth/forgot-password/request-otp', (req, res) => {
+  const { identifier } = req.body;
+  if (!identifier) {
+    return res.status(400).json({ error: 'Username, professional ID, or registered email is required.' });
+  }
+
+  const clean = identifier.trim();
+  const user = db.prepare(`
+    SELECT u.id, u.username, u.full_name, u.role, u.phone, u.email, u.professional_id,
+           f.name as facility_name
+    FROM users u
+    LEFT JOIN facilities f ON u.facility_id = f.id
+    WHERE (LOWER(u.username) = LOWER(?) OR LOWER(u.email) = LOWER(?) OR u.professional_id = ?) AND u.is_active = 1
+  `).get(clean, clean, clean);
+
+  if (!user) {
+    return res.status(404).json({ error: 'No active staff account found matching this identifier.' });
+  }
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  passwordResetOtps.set(user.username.toLowerCase(), {
+    userId: user.id,
+    otp,
+    expiresAt,
+    phone: user.phone || '+251-91-123-4567'
+  });
+
+  // Record simulated Ethio Telecom SMS notification
+  try {
+    const notifId = 'SMS-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+    db.prepare(`
+      INSERT INTO notifications (id, patient_id, phone_number, message_type, message_text, language, status, sent_at)
+      VALUES (?, ?, ?, 'PASSWORD_RESET_OTP', ?, 'en', 'DELIVERED', datetime('now'))
+    `).run(
+      notifId,
+      user.id,
+      user.phone || '+251-91-123-4567',
+      `[NPDMS Security Alert]: Your password reset code is ${otp}. Valid for 10 minutes.`
+    );
+  } catch (e) {}
+
+  // Mask phone number for security
+  const rawPhone = user.phone || '+251-91-123-4567';
+  const maskedPhone = rawPhone.length > 8 
+    ? rawPhone.slice(0, 7) + ' ••• ' + rawPhone.slice(-4)
+    : rawPhone;
+
+  res.json({
+    success: true,
+    message: `Verification code dispatched via Ethio Telecom SMS to registered phone.`,
+    username: user.username,
+    full_name: user.full_name,
+    maskedPhone,
+    demoOtp: otp
+  });
+});
+
+app.post('/api/auth/forgot-password/reset', (req, res) => {
+  const { identifier, otp, new_password } = req.body;
+  if (!identifier || !otp || !new_password) {
+    return res.status(400).json({ error: 'Identifier, verification code, and new password are required.' });
+  }
+
+  const clean = identifier.trim().toLowerCase();
+  const resetRecord = passwordResetOtps.get(clean);
+
+  // Validate OTP (match issued OTP or test demo code 123456)
+  const isValidOtp = (resetRecord && resetRecord.otp === otp.trim()) || otp.trim() === '123456';
+
+  if (!isValidOtp) {
+    return res.status(400).json({ error: 'Invalid or expired 6-digit verification code.' });
+  }
+
+  const user = db.prepare('SELECT id, username, full_name, role, facility_id FROM users WHERE LOWER(username) = ? OR LOWER(email) = ? OR professional_id = ?')
+    .get(clean, clean, clean);
+
+  if (!user) {
+    return res.status(404).json({ error: 'User record not found.' });
+  }
+
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(new_password, user.id);
+  passwordResetOtps.delete(clean);
+
+  recordAudit(
+    user.id,
+    user.full_name,
+    user.role,
+    user.facility_id,
+    null,
+    'PASSWORD_RESET',
+    'AUTHENTICATION',
+    `Practitioner successfully completed password reset via Ethio Telecom SMS verification.`
+  );
+
+  res.json({
+    success: true,
+    message: 'Your password has been successfully reset! You can now sign in with your new password.'
+  });
+});
+
+// -------------------------------------------------------------
 // 2. PATIENT REGISTRATION & IDENTITY MANAGEMENT
 // -------------------------------------------------------------
 app.get('/api/patients', (req, res) => {
