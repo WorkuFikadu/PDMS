@@ -57,6 +57,26 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Admin re-seed endpoint for cloud/serverless environments
+app.get('/api/seed', (req, res) => {
+  try {
+    const { seedDatabase } = require('./seed');
+    seedDatabase();
+    const facCount = db.prepare('SELECT count(*) as count FROM facilities').get();
+    const userCount = db.prepare('SELECT count(*) as count FROM users').get();
+    const patientCount = db.prepare('SELECT count(*) as count FROM patients').get();
+    res.json({
+      success: true,
+      message: 'NPDMS Database successfully seeded with 20 Ethiopian hospitals, clinicians, and patients.',
+      facilities: facCount.count,
+      users: userCount.count,
+      patients: patientCount.count
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Seed failed: ' + err.message });
+  }
+});
+
 app.get('/api/facilities', (req, res) => {
   const facilities = db.prepare(`
     SELECT f.*,
@@ -206,13 +226,34 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   const cleanUser = username.trim();
-  const user = db.prepare(`
+  let user = db.prepare(`
     SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.professional_id, u.email, u.phone,
            f.name as facility_name, f.code as facility_code, f.region as facility_region
     FROM users u
     LEFT JOIN facilities f ON u.facility_id = f.id
     WHERE (LOWER(u.username) = LOWER(?) OR LOWER(u.email) = LOWER(?) OR u.professional_id = ?) AND u.is_active = 1
   `).get(cleanUser, cleanUser, cleanUser);
+
+  // If user not found, check if users table is empty; if so, auto-seed and retry once
+  if (!user) {
+    try {
+      const uCount = db.prepare('SELECT count(*) as count FROM users').get();
+      if (!uCount || uCount.count === 0) {
+        console.log('Zero users in database on login attempt. Executing auto-seed...');
+        const { seedDatabase } = require('./seed');
+        seedDatabase();
+        user = db.prepare(`
+          SELECT u.id, u.username, u.full_name, u.role, u.facility_id, u.professional_id, u.email, u.phone,
+                 f.name as facility_name, f.code as facility_code, f.region as facility_region
+          FROM users u
+          LEFT JOIN facilities f ON u.facility_id = f.id
+          WHERE (LOWER(u.username) = LOWER(?) OR LOWER(u.email) = LOWER(?) OR u.professional_id = ?) AND u.is_active = 1
+        `).get(cleanUser, cleanUser, cleanUser);
+      }
+    } catch (e) {
+      console.warn('Auto-seed attempt failed:', e.message);
+    }
+  }
 
   if (!user) {
     return res.status(401).json({

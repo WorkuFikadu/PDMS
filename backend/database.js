@@ -411,14 +411,19 @@ function initDatabase() {
   console.log('NPDMS Database schema initialized successfully.');
 
   try {
+    const userRow = db.prepare('SELECT count(*) as count FROM users').get();
     const facRow = db.prepare('SELECT count(*) as count FROM facilities').get();
-    if (!facRow || facRow.count === 0) {
-      console.log('Auto-seeding default Ethiopian health facilities and users...');
+    if (!userRow || userRow.count === 0 || !facRow || facRow.count < 15) {
+      console.log('Seeding Ethiopian health system data (20 hospitals + clinicians + patients)...');
       const { seedDatabase } = require('./seed');
       seedDatabase();
     }
   } catch (err) {
     console.warn('Auto-seed check notice:', err.message);
+    try {
+      const { seedDatabase } = require('./seed');
+      seedDatabase();
+    } catch (e2) {}
   }
 }
 
