@@ -15,12 +15,21 @@ function initDatabase() {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       code TEXT UNIQUE NOT NULL,
-      type TEXT NOT NULL, -- SPECIALIZED_HOSPITAL, GENERAL_HOSPITAL, PRIMARY_HOSPITAL, HEALTH_CENTER
+      type TEXT NOT NULL, -- SPECIALIZED_HOSPITAL, GENERAL_HOSPITAL, PRIMARY_HOSPITAL, HEALTH_CENTER, HEALTH_POST
       region TEXT NOT NULL,
       zone TEXT NOT NULL,
       woreda TEXT NOT NULL,
       phone TEXT,
-      is_active INTEGER DEFAULT 1
+      email TEXT,
+      address TEXT,
+      bed_capacity INTEGER DEFAULT 0,
+      latitude REAL,
+      longitude REAL,
+      director_name TEXT,
+      fayda_connected INTEGER DEFAULT 1,
+      nhdis_connected INTEGER DEFAULT 1,
+      is_active INTEGER DEFAULT 1,
+      joined_at TEXT DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS users (

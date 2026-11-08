@@ -34,15 +34,39 @@ function seedDatabase() {
 
   console.log('Seeding Ethiopian health facilities...');
   const insertFacility = db.prepare(`
-    INSERT INTO facilities (id, name, code, type, region, zone, woreda, phone, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    INSERT INTO facilities (id, name, code, type, region, zone, woreda, phone, email, address, bed_capacity, latitude, longitude, director_name, fayda_connected, nhdis_connected, is_active, joined_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, datetime('now'))
   `);
 
+  // [id, name, code, type, region, zone, woreda, phone, email, address, beds, lat, lon, director]
   const facilities = [
-    ['FAC-JUMC', 'Jimma Medical Center (JMC)', 'JMC-ETH', 'SPECIALIZED_HOSPITAL', 'Oromia', 'Jimma', 'Jimma City', '+251-47-111-1458'],
-    ['FAC-SHENEN', 'Shenen Gibe General Hospital', 'SGGH-ETH', 'GENERAL_HOSPITAL', 'Oromia', 'Jimma', 'Jimma City', '+251-47-111-2090'],
-    ['FAC-AGARO', 'Agaro Primary Hospital', 'APH-ETH', 'PRIMARY_HOSPITAL', 'Oromia', 'Jimma', 'Agaro Town', '+251-47-225-0120'],
-    ['FAC-TASH', 'Tikur Anbessa (Black Lion) Specialized Hospital', 'TASH-ETH', 'SPECIALIZED_HOSPITAL', 'Addis Ababa', 'Lideta', 'Lideta Woreda 03', '+251-11-551-1211']
+    // ── SPECIALIZED HOSPITALS ───────────────────────────────────────────────
+    ['FAC-JUMC',  'Jimma Medical Center (JMC)',                    'JMC-ETH',   'SPECIALIZED_HOSPITAL', 'Oromia',       'Jimma',         'Jimma City',          '+251-47-111-1458', 'info@jmc.edu.et',           'Jimma, Oromia Region',                       800,   7.6731,  36.8344, 'Prof. Tesfaye Gari'],
+    ['FAC-TASH',  'Tikur Anbessa (Black Lion) Specialized Hospital','TASH-ETH',  'SPECIALIZED_HOSPITAL', 'Addis Ababa',  'Lideta',        'Lideta Woreda 03',    '+251-11-551-1211', 'info@tash.gov.et',          'Lideta Sub-City, Addis Ababa',                700,   9.0384,  38.7467, 'Dr. Tewodros Tefera'],
+    ['FAC-ALERT', 'ALERT Hospital (All Africa Leprosy)',            'ALERT-ETH', 'SPECIALIZED_HOSPITAL', 'Addis Ababa',  'Kolfe Keranio', 'Kolfe Woreda 07',     '+251-11-371-0680', 'info@alert.gov.et',         'Kolfe Keranio Sub-City, Addis Ababa',         250,   9.0272,  38.7117, 'Dr. Yimam Getachew'],
+    ['FAC-YEKAT', 'Yekatit 12 Hospital Medical College',           'YEK12-ETH', 'SPECIALIZED_HOSPITAL', 'Addis Ababa',  'Addis Ketema',  'Addis Ketema W. 08',  '+251-11-155-5425', 'info@yekatit12.gov.et',     'Addis Ketema, Addis Ababa',                   520,   9.0258,  38.7418, 'Dr. Alemu Kebede'],
+    ['FAC-GHION', "St. Paul's Hospital Millennium Medical College",'SPHMMC-ETH','SPECIALIZED_HOSPITAL', 'Addis Ababa',  'Gulele',        'Gulele Woreda 01',    '+251-11-278-0003', 'info@sphmmc.edu.et',        'Gulele Sub-City, Addis Ababa',               1000,   9.0580,  38.7399, 'Dr. Biruk Hailu'],
+    ['FAC-GONDAR','University of Gondar Comprehensive Hospital',   'UOG-ETH',   'SPECIALIZED_HOSPITAL', 'Amhara',       'Central Gondar','Gondar City',         '+251-58-114-1944', 'info@uog.edu.et',           'Gondar, Amhara Region',                       600,  12.6080,  37.4621, 'Prof. Sintayehu Alemu'],
+    ['FAC-MEKELE','Ayder Comprehensive Specialized Hospital',      'AYDER-ETH', 'SPECIALIZED_HOSPITAL', 'Tigray',       'Mekelle',       'Mekelle City',        '+251-34-416-6000', 'info@ayder.gov.et',         'Mekelle, Tigray Region',                      550,  13.4967,  39.4779, 'Dr. Meles Teklu'],
+    ['FAC-HAWASA','Hawassa University Comprehensive Referral Hosp','HUCSH-ETH', 'SPECIALIZED_HOSPITAL', 'Sidama',       'Hawassa',       'Hawassa City',        '+251-46-220-5355', 'info@hucsh.edu.et',         'Hawassa, Sidama Region',                      450,   7.0504,  38.4955, 'Dr. Yonas Girma'],
+    ['FAC-DESIE', 'Dessie Comprehensive Specialized Hospital',     'DCSH-ETH',  'SPECIALIZED_HOSPITAL', 'Amhara',       'South Wollo',   'Dessie City',         '+251-33-311-2061', 'info@dcsh.gov.et',          'Dessie, Amhara Region',                       400,  11.1289,  39.6354, 'Dr. Tsegaye Bekele'],
+    ['FAC-JIMMA2','Jimma University Teaching Hospital - Annex',    'JUTH-ETH',  'SPECIALIZED_HOSPITAL', 'Oromia',       'Jimma',         'Jimma City Woreda 4', '+251-47-111-2000', 'annex@jmch.edu.et',         'Jimma City, Oromia Region',                   120,   7.6693,  36.8321, 'Dr. Girma Tesfaye'],
+
+    // ── GENERAL HOSPITALS ───────────────────────────────────────────────────
+    ['FAC-SHENEN','Shenen Gibe General Hospital',                  'SGGH-ETH',  'GENERAL_HOSPITAL',     'Oromia',       'Jimma',         'Jimma City',          '+251-47-111-2090', 'sggh@health.gov.et',        'Jimma City, Oromia',                          200,   7.6809,  36.8368, 'Dr. Chaltu Gemechu'],
+    ['FAC-NEKMT', 'Nekemte Specialized Hospital',                  'NSH-ETH',   'GENERAL_HOSPITAL',     'Oromia',       'East Welega',   'Nekemte City',        '+251-57-661-1377', 'info@nekemtesh.gov.et',     'Nekemte, East Welega, Oromia',                350,   9.0893,  36.5435, 'Dr. Daba Tolosa'],
+    ['FAC-JIMMA3','Mettu Karl Comprehensive Specialized Hospital', 'MKCSH-ETH', 'GENERAL_HOSPITAL',     'Oromia',       'Ilu Ababora',   'Metu Town',           '+251-47-336-0025', 'info@mettukarl.gov.et',     'Metu, Ilu Ababora, Oromia',                   280,   8.3056,  35.5886, 'Dr. Hawa Dama'],
+    ['FAC-BALE',  'Robe General Hospital (Bale Zone)',             'RGH-ETH',   'GENERAL_HOSPITAL',     'Oromia',       'Bale',          'Robe Town',           '+251-22-660-1256', 'info@robegeneralhosp.gov.et','Robe, Bale Zone, Oromia',                    220,   7.1256,  40.0010, 'Dr. Lemessa Bulcha'],
+    ['FAC-ADAMA', 'Adama Hospital Medical College',                'AHMC-ETH',  'GENERAL_HOSPITAL',     'Oromia',       'East Shewa',    'Adama City',          '+251-22-110-0023', 'info@adamamc.gov.et',       'Adama, East Shewa, Oromia',                   350,   8.5411,  39.2694, 'Dr. Frehiwot Mamo'],
+
+    // ── PRIMARY HOSPITALS ───────────────────────────────────────────────────
+    ['FAC-AGARO', 'Agaro Primary Hospital',                        'APH-ETH',   'PRIMARY_HOSPITAL',     'Oromia',       'Jimma',         'Agaro Town',          '+251-47-225-0120', 'agaro@health.gov.et',       'Agaro, Jimma Zone, Oromia',                    80,   7.8549,  36.5938, 'Dr. Tariku Bekele'],
+    ['FAC-SERBO', 'Serbo Primary Hospital',                        'SPH-ETH',   'PRIMARY_HOSPITAL',     'Oromia',       'Jimma',         'Kersa Woreda',        '+251-47-228-1030', 'serbo@health.gov.et',        'Serbo, Kersa Woreda, Jimma Zone',              60,   7.8044,  36.9289, 'Sr. Almaz Bekele (OIC)'],
+    ['FAC-LIMU',  'Limu-Kosa Primary Hospital',                    'LPH-ETH',   'PRIMARY_HOSPITAL',     'Oromia',       'Jimma',         'Limu Kosa Woreda',    '+251-47-226-0045', 'limukosa@health.gov.et',    'Limu Kosa, Jimma Zone, Oromia',                50,   8.0431,  36.9910, 'Dr. Daro Hassen'],
+
+    // ── HEALTH CENTERS ──────────────────────────────────────────────────────
+    ['FAC-JIMHC', 'Jimma Health Center (Urban)',                   'JHC-ETH',   'HEALTH_CENTER',        'Oromia',       'Jimma',         'Jimma City Woreda 2', '+251-47-111-5500', 'jimhc@health.gov.et',       'Jimma City Woreda 2, Oromia',                  30,   7.6752,  36.8321, 'Sr. Fatuma Kedir (HO)'],
+    ['FAC-KERSA', 'Kersa Health Center',                           'KHC-ETH',   'HEALTH_CENTER',        'Oromia',       'Jimma',         'Kersa Town',          '+251-47-228-1500', 'kersa@health.gov.et',       'Kersa Town, Jimma Zone',                       20,   7.7898,  36.9712, 'Sr. Hirut Girma (HO)'],
   ];
 
   facilities.forEach(f => insertFacility.run(...f));

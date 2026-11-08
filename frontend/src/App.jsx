@@ -17,6 +17,7 @@ import PatientPortal from './components/PatientPortal';
 import AppointmentsModule from './components/AppointmentsModule';
 import MaternalChildModule from './components/MaternalChildModule';
 import AiClinicalHub from './components/AiClinicalHub';
+import HospitalNetworkModule from './components/HospitalNetworkModule';
 import { translations } from './i18n';
 import { CheckCircle2, Stethoscope, X } from 'lucide-react';
 
@@ -356,6 +357,13 @@ export default function App() {
 
                 {activeTab === 'patient-portal' && (
                   <PatientPortal
+                    currentUser={currentUser}
+                    t={t}
+                  />
+                )}
+
+                {activeTab === 'hospital-network' && (
+                  <HospitalNetworkModule
                     currentUser={currentUser}
                     t={t}
                   />

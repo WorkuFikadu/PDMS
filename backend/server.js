@@ -41,8 +41,133 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/facilities', (req, res) => {
-  const facilities = db.prepare('SELECT * FROM facilities WHERE is_active = 1').all();
+  const facilities = db.prepare(`
+    SELECT f.*,
+      (SELECT COUNT(*) FROM patients p WHERE p.created_facility_id = f.id) as patient_count,
+      (SELECT COUNT(*) FROM encounters e WHERE e.facility_id = f.id) as encounter_count,
+      (SELECT COUNT(*) FROM users u WHERE u.facility_id = f.id AND u.is_active = 1) as staff_count
+    FROM facilities f
+    WHERE f.is_active = 1
+    ORDER BY f.type ASC, f.name ASC
+  `).all();
   res.json(facilities);
+});
+
+// GET all facilities including inactive (for admin view)
+app.get('/api/facilities/all', (req, res) => {
+  const facilities = db.prepare(`
+    SELECT f.*,
+      (SELECT COUNT(*) FROM patients p WHERE p.created_facility_id = f.id) as patient_count,
+      (SELECT COUNT(*) FROM encounters e WHERE e.facility_id = f.id) as encounter_count,
+      (SELECT COUNT(*) FROM users u WHERE u.facility_id = f.id AND u.is_active = 1) as staff_count
+    FROM facilities f
+    ORDER BY f.is_active DESC, f.type ASC, f.name ASC
+  `).all();
+  res.json(facilities);
+});
+
+// GET single facility stats
+app.get('/api/facilities/:id', (req, res) => {
+  const fac = db.prepare(`
+    SELECT f.*,
+      (SELECT COUNT(*) FROM patients p WHERE p.created_facility_id = f.id) as patient_count,
+      (SELECT COUNT(*) FROM encounters e WHERE e.facility_id = f.id) as encounter_count,
+      (SELECT COUNT(*) FROM users u WHERE u.facility_id = f.id AND u.is_active = 1) as staff_count,
+      (SELECT COUNT(*) FROM referrals r WHERE r.to_facility_id = f.id) as incoming_referrals,
+      (SELECT COUNT(*) FROM referrals r WHERE r.from_facility_id = f.id) as outgoing_referrals
+    FROM facilities f WHERE f.id = ?
+  `).get(req.params.id);
+  if (!fac) return res.status(404).json({ error: 'Facility not found' });
+  res.json(fac);
+});
+
+// POST create new hospital/facility
+app.post('/api/facilities', (req, res) => {
+  const {
+    name, code, type, region, zone, woreda, phone, email,
+    address, bed_capacity, latitude, longitude, director_name,
+    fayda_connected, nhdis_connected
+  } = req.body;
+
+  if (!name || !code || !type || !region || !zone) {
+    return res.status(400).json({ error: 'name, code, type, region, zone are required.' });
+  }
+
+  // Check for duplicate code
+  const existing = db.prepare('SELECT id FROM facilities WHERE code = ?').get(code);
+  if (existing) return res.status(409).json({ error: `Facility code "${code}" already exists.` });
+
+  const id = 'FAC-' + code.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
+
+  try {
+    db.prepare(`
+      INSERT INTO facilities (id, name, code, type, region, zone, woreda, phone, email, address,
+        bed_capacity, latitude, longitude, director_name, fayda_connected, nhdis_connected, is_active, joined_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))
+    `).run(
+      id, name, code.toUpperCase(), type, region, zone, woreda || '', phone || '', email || '',
+      address || '', bed_capacity || 0, latitude || null, longitude || null,
+      director_name || '', fayda_connected !== false ? 1 : 0, nhdis_connected !== false ? 1 : 0
+    );
+
+    const created = db.prepare('SELECT * FROM facilities WHERE id = ?').get(id);
+    res.status(201).json(created);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update facility
+app.put('/api/facilities/:id', (req, res) => {
+  const fac = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+  if (!fac) return res.status(404).json({ error: 'Facility not found' });
+
+  const {
+    name, type, region, zone, woreda, phone, email, address,
+    bed_capacity, latitude, longitude, director_name, fayda_connected, nhdis_connected, is_active
+  } = req.body;
+
+  db.prepare(`
+    UPDATE facilities SET
+      name = COALESCE(?, name),
+      type = COALESCE(?, type),
+      region = COALESCE(?, region),
+      zone = COALESCE(?, zone),
+      woreda = COALESCE(?, woreda),
+      phone = COALESCE(?, phone),
+      email = COALESCE(?, email),
+      address = COALESCE(?, address),
+      bed_capacity = COALESCE(?, bed_capacity),
+      latitude = COALESCE(?, latitude),
+      longitude = COALESCE(?, longitude),
+      director_name = COALESCE(?, director_name),
+      fayda_connected = COALESCE(?, fayda_connected),
+      nhdis_connected = COALESCE(?, nhdis_connected),
+      is_active = COALESCE(?, is_active)
+    WHERE id = ?
+  `).run(
+    name || null, type || null, region || null, zone || null, woreda || null,
+    phone || null, email || null, address || null,
+    bed_capacity !== undefined ? bed_capacity : null,
+    latitude !== undefined ? latitude : null,
+    longitude !== undefined ? longitude : null,
+    director_name || null,
+    fayda_connected !== undefined ? (fayda_connected ? 1 : 0) : null,
+    nhdis_connected !== undefined ? (nhdis_connected ? 1 : 0) : null,
+    is_active !== undefined ? (is_active ? 1 : 0) : null,
+    req.params.id
+  );
+
+  const updated = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+  res.json(updated);
+});
+
+// DELETE (soft-deactivate) facility
+app.delete('/api/facilities/:id', (req, res) => {
+  const fac = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+  if (!fac) return res.status(404).json({ error: 'Facility not found' });
+  db.prepare('UPDATE facilities SET is_active = 0 WHERE id = ?').run(req.params.id);
+  res.json({ success: true, message: `${fac.name} has been deactivated from the NPDMS Network.` });
 });
 
 app.get('/api/auth/users', (req, res) => {
