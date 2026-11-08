@@ -4,17 +4,57 @@ import {
   ShieldCheck, Lock, User, Building2, KeyRound, Fingerprint,
   QrCode, ArrowRight, CheckCircle2, AlertCircle, Eye, EyeOff,
   Stethoscope, Sparkles, HeartPulse, Hospital, Shield, Globe,
-  RotateCcw, MessageSquare, X, Check
+  RotateCcw, MessageSquare, X, Check, Activity, Bed, Users
 } from 'lucide-react';
+
+// Department clinical roles defined by healthcare facility
+const HOSPITAL_ROLES = {
+  'FAC-JUMC': [
+    { roleTitle: 'Specialist Physician & Consultant', dept: 'OPD & Internal Medicine', username: 'dr_abebe', role: 'DOCTOR', icon: '🩺' },
+    { roleTitle: 'Emergency & Triage Nursing Officer', dept: 'Emergency Department & Triage', username: 'nurse_fatuma', role: 'NURSE', icon: '👩‍⚕️' },
+    { roleTitle: 'Clinical Pharmacist & Dispenser', dept: 'Central Digital Pharmacy', username: 'pharm_tigist', role: 'PHARMACIST', icon: '💊' },
+    { roleTitle: 'Diagnostic Laboratory Technologist', dept: 'Pathology & Clinical Chemistry', username: 'lab_dawit', role: 'LAB_TECH', icon: '🔬' },
+    { roleTitle: 'Patient Admissions & Records Officer', dept: 'Fayda National Health Registry', username: 'reg_almaz', role: 'REGISTRATION_OFFICER', icon: '📋' },
+    { roleTitle: 'Medical Director & Hospital Administrator', dept: 'Executive Hospital Governance', username: 'admin_worku', role: 'FACILITY_ADMIN', icon: '🛡️' }
+  ],
+  'FAC-SHENEN': [
+    { roleTitle: 'General Surgeon & Clinical Physician', dept: 'General Surgery & Inpatient', username: 'dr_chala', role: 'DOCTOR', icon: '🩺' },
+    { roleTitle: 'Inpatient & Maternity Ward Nurse', dept: 'Inpatient Nursing Services', username: 'nurse_fatuma', role: 'NURSE', icon: '👩‍⚕️' },
+    { roleTitle: 'Pharmacy & Drug Store Lead', dept: 'Hospital Pharmacy', username: 'pharm_tigist', role: 'PHARMACIST', icon: '💊' },
+    { roleTitle: 'Patient Intake & Registration Officer', dept: 'Reception & Records', username: 'reg_almaz', role: 'REGISTRATION_OFFICER', icon: '📋' }
+  ],
+  'FAC-AGARO': [
+    { roleTitle: 'Primary Care Physician / Clinic Lead', dept: 'General Outpatient & Triage', username: 'dr_tariku', role: 'DOCTOR', icon: '🩺' },
+    { roleTitle: 'Community Health & Maternal Nurse', dept: 'Primary Care & Referral', username: 'nurse_fatuma', role: 'NURSE', icon: '👩‍⚕️' },
+    { roleTitle: 'Rural Health Intake & Registry Officer', dept: 'Outpatient Registration Desk', username: 'reg_almaz', role: 'REGISTRATION_OFFICER', icon: '📋' }
+  ],
+  'FAC-TASH': [
+    { roleTitle: 'Tertiary Referral Specialist & Oncologist', dept: 'Specialized Consultations & Oncology', username: 'dr_abebe', role: 'DOCTOR', icon: '🩺' },
+    { roleTitle: 'Trauma & Critical Care Nurse', dept: 'Emergency Trauma Center (ICU)', username: 'nurse_fatuma', role: 'NURSE', icon: '👩‍⚕️' },
+    { roleTitle: 'Hospital Pharmacotherapy Specialist', dept: 'Specialized Pharmacy Services', username: 'pharm_tigist', role: 'PHARMACIST', icon: '💊' },
+    { roleTitle: 'National Health Spine Administrator', dept: 'MOH Interoperability Office', username: 'admin_worku', role: 'FACILITY_ADMIN', icon: '🛡️' }
+  ]
+};
+
+const getRolesForFacility = (facId, facName) => {
+  if (HOSPITAL_ROLES[facId]) return HOSPITAL_ROLES[facId];
+  return [
+    { roleTitle: 'Attending Physician / Specialist', dept: `${facName || 'Hospital'} · Medical OPD`, username: 'dr_abebe', role: 'DOCTOR', icon: '🩺' },
+    { roleTitle: 'Head Nurse & Triage In-Charge', dept: `${facName || 'Hospital'} · Clinical Ward`, username: 'nurse_fatuma', role: 'NURSE', icon: '👩‍⚕️' },
+    { roleTitle: 'Hospital Pharmacist', dept: `${facName || 'Hospital'} · Dispensary`, username: 'pharm_tigist', role: 'PHARMACIST', icon: '💊' },
+    { roleTitle: 'Registration & Admissions Officer', dept: `${facName || 'Hospital'} · Patient Intake`, username: 'reg_almaz', role: 'REGISTRATION_OFFICER', icon: '📋' }
+  ];
+};
 
 export default function LoginPage({
   onLoginSuccess, facilities = [], lang = 'en', setLang
 }) {
   const [authMode, setAuthMode] = useState('CREDENTIALS'); // 'CREDENTIALS' | 'FAYDA'
+  const [selectedFacilityId, setSelectedFacilityId] = useState('FAC-JUMC');
+  const [selectedRoleTitle, setSelectedRoleTitle] = useState('Specialist Physician & Consultant');
   const [username, setUsername] = useState('dr_abebe');
   const [password, setPassword] = useState('demo123');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedFacilityId, setSelectedFacilityId] = useState('FAC-JUMC');
 
   // Fayda login state
   const [faydaFin, setFaydaFin] = useState('1985-7821-4923');
@@ -24,12 +64,54 @@ export default function LoginPage({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Set default facility if available
+  // Forgot Password State & Handlers
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [forgotIdentifier, setForgotIdentifier] = useState('dr_abebe');
+  const [forgotChannel, setForgotChannel] = useState('SMS');
+  const [forgotMaskedPhone, setForgotMaskedPhone] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [demoOtp, setDemoOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+
+  // Default facility initialization
   useEffect(() => {
     if (facilities.length > 0 && !selectedFacilityId) {
       setSelectedFacilityId(facilities[0].id);
     }
   }, [facilities]);
+
+  const selectedFacility = facilities.find(f => f.id === selectedFacilityId) || {
+    id: 'FAC-JUMC',
+    name: 'Jimma Medical Center (JMC)',
+    code: 'JMC-ETH',
+    region: 'Oromia'
+  };
+
+  const facilityRoles = getRolesForFacility(selectedFacilityId, selectedFacility?.name);
+
+  // When facility changes, auto-select the first clinical role for that facility
+  const handleFacilityChange = (facId) => {
+    setSelectedFacilityId(facId);
+    const targetFac = facilities.find(f => f.id === facId);
+    const roles = getRolesForFacility(facId, targetFac?.name);
+    if (roles.length > 0) {
+      setSelectedRoleTitle(roles[0].roleTitle);
+      setUsername(roles[0].username);
+      setPassword('demo123');
+    }
+  };
+
+  const selectHospitalRole = (roleItem) => {
+    setSelectedRoleTitle(roleItem.roleTitle);
+    setUsername(roleItem.username);
+    setPassword('demo123');
+  };
 
   const handleStandardLogin = async (e) => {
     if (e) e.preventDefault();
@@ -49,7 +131,7 @@ export default function LoginPage({
 
       const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.error || 'Authentication failed. Please check credentials.');
+        setErrorMsg(data.error || 'Authentication failed. Please verify credentials.');
       } else {
         localStorage.setItem('npdms_auth_user', JSON.stringify(data.user));
         if (data.token) localStorage.setItem('npdms_auth_token', data.token);
@@ -108,21 +190,6 @@ export default function LoginPage({
       }, 500);
     }, 1200);
   };
-
-  // Forgot Password State & Handlers
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState(1); // 1: identify -> 2: otp & new pass -> 3: success
-  const [forgotIdentifier, setForgotIdentifier] = useState('dr_abebe');
-  const [forgotChannel, setForgotChannel] = useState('SMS'); // 'SMS' | 'FAYDA'
-  const [forgotMaskedPhone, setForgotMaskedPhone] = useState('');
-  const [forgotOtp, setForgotOtp] = useState('');
-  const [demoOtp, setDemoOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotError, setForgotError] = useState('');
-  const [forgotSuccess, setForgotSuccess] = useState('');
 
   const handleRequestResetOtp = async (e) => {
     if (e) e.preventDefault();
@@ -183,7 +250,6 @@ export default function LoginPage({
       } else {
         setForgotSuccess(data.message);
         setForgotStep(3);
-        // Pre-fill login password with the newly set password
         setPassword(newPassword);
         setUsername(forgotIdentifier);
       }
@@ -192,24 +258,6 @@ export default function LoginPage({
     } finally {
       setForgotLoading(false);
     }
-  };
-
-  // Quick 1-click demo accounts
-  const demoAccounts = [
-    { username: 'dr_abebe', name: 'Dr. Abebe Tadesse, MD', role: 'Doctor / Specialist', facility: 'FAC-JUMC', facName: 'Jimma Medical Center (JMC)', icon: '👨‍⚕️' },
-    { username: 'dr_chala', name: 'Dr. Chala Gemechu, MD', role: 'General Surgeon', facility: 'FAC-SHENEN', facName: 'Shenen Gibe Hospital', icon: '👨‍⚕️' },
-    { username: 'dr_tariku', name: 'Dr. Tariku Bekele, MD', role: 'Primary Physician', facility: 'FAC-AGARO', facName: 'Agaro Primary Hospital', icon: '👨‍⚕️' },
-    { username: 'nurse_fatuma', name: 'Sr. Fatuma Kedir, BSc', role: 'Triage Nurse', facility: 'FAC-JUMC', facName: 'Jimma Medical Center (JMC)', icon: '👩‍⚕️' },
-    { username: 'pharm_tigist', name: 'Tigist Haile, BPharm', role: 'Pharmacist', facility: 'FAC-JUMC', facName: 'Jimma Medical Center (JMC)', icon: '💊' },
-    { username: 'reg_almaz', name: 'Almaz Bekele', role: 'Registrar', facility: 'FAC-JUMC', facName: 'Jimma Medical Center (JMC)', icon: '📋' },
-    { username: 'admin_worku', name: 'Worku Fikadu', role: 'Lead Admin', facility: 'FAC-JUMC', facName: 'MOH National Admin', icon: '🛡️' }
-  ];
-
-  const selectDemoAccount = (acc) => {
-    setUsername(acc.username);
-    setPassword('demo123');
-    setSelectedFacilityId(acc.facility);
-    setAuthMode('CREDENTIALS');
   };
 
   return (
@@ -278,8 +326,8 @@ export default function LoginPage({
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10">
         <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
-          {/* LEFT COLUMN: HERO INFORMATION & CORE PRINCIPLES */}
-          <div className="lg:col-span-6 space-y-6">
+          {/* LEFT COLUMN: HERO INFORMATION & SYSTEM ARCHITECTURE */}
+          <div className="lg:col-span-5 space-y-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-bold">
                 <ShieldCheck className="w-4 h-4 text-sky-400" />
@@ -297,7 +345,7 @@ export default function LoginPage({
               </p>
             </div>
 
-            {/* Feature Pills */}
+            {/* Feature Highlights Grid */}
             <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
               <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
                 <div className="flex items-center gap-2 text-sky-400 font-bold">
@@ -332,33 +380,21 @@ export default function LoginPage({
               </div>
             </div>
 
-            {/* Quick Demo Selector */}
-            <div className="space-y-2 pt-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                ⚡ 1-Click Fast Clinician Demo Access:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {demoAccounts.slice(0, 4).map((acc) => (
-                  <button
-                    key={acc.username}
-                    type="button"
-                    onClick={() => selectDemoAccount(acc)}
-                    className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                      username === acc.username
-                        ? 'bg-sky-600 text-white border-sky-500 shadow-md ring-2 ring-sky-400/40'
-                        : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
-                    }`}
-                  >
-                    <span>{acc.icon}</span>
-                    <span>{acc.name.split(',')[0]}</span>
-                  </button>
-                ))}
+            {/* Hospital-First Instructions Card */}
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs space-y-1.5">
+              <div className="font-bold text-sky-400 flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                <span>Hospital-Based Authentication</span>
               </div>
+              <p className="text-[11px] text-slate-300">
+                To sign in, select your assigned healthcare institution on the right. 
+                The system will automatically load the active clinical departments and professional roles registered at that facility.
+              </p>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: AUTHENTICATION CARD */}
-          <div className="lg:col-span-6">
+          {/* RIGHT COLUMN: HOSPITAL-FIRST LOGIN CARD */}
+          <div className="lg:col-span-7">
             <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5">
               
               {/* Card Header & Mode Switcher */}
@@ -366,14 +402,14 @@ export default function LoginPage({
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-lg font-black text-white">Healthcare Portal Login</h2>
-                    <p className="text-xs text-slate-400">Authenticate practitioner or clinical staff credentials</p>
+                    <p className="text-xs text-slate-400">Select health facility & clinical department role</p>
                   </div>
                   <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
                     <Lock className="w-4 h-4" />
                   </div>
                 </div>
 
-                {/* Tabs */}
+                {/* Authentication Method Tabs */}
                 <div className="grid grid-cols-2 gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800/80 text-xs font-bold">
                   <button
                     type="button"
@@ -384,8 +420,8 @@ export default function LoginPage({
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    <User className="w-3.5 h-3.5" />
-                    <span>Staff Password</span>
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Hospital Staff Sign In</span>
                   </button>
                   <button
                     type="button"
@@ -410,84 +446,132 @@ export default function LoginPage({
                 </div>
               )}
 
-              {/* TAB 1: STANDARD CREDENTIALS FORM */}
+              {/* TAB 1: HOSPITAL-FIRST CREDENTIALS FORM */}
               {authMode === 'CREDENTIALS' && (
                 <form onSubmit={handleStandardLogin} className="space-y-4">
-                  {/* Active Facility */}
+                  
+                  {/* 1. SELECT TARGET HEALTH FACILITY (HOSPITAL NAME) */}
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                      Target Health Facility
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-bold text-slate-300">
+                        1. Select Healthcare Institution (Hospital Name)
+                      </label>
+                      <span className="text-[10px] text-sky-400 font-mono font-bold">
+                        {facilities.length > 0 ? `${facilities.length} Facilities Online` : '20 Hospitals'}
+                      </span>
+                    </div>
                     <div className="relative">
-                      <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Building2 className="w-4 h-4 text-sky-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <select
                         value={selectedFacilityId}
-                        onChange={(e) => setSelectedFacilityId(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-sky-500 cursor-pointer"
+                        onChange={(e) => handleFacilityChange(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-sky-500/40 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer shadow-inner"
                       >
                         {facilities.map((fac) => (
-                          <option key={fac.id} value={fac.id} className="bg-slate-900 text-white">
-                            {fac.name} ({fac.code})
+                          <option key={fac.id} value={fac.id} className="bg-slate-900 text-white font-medium">
+                            {fac.name} · ({fac.code}) — {fac.region}
                           </option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  {/* Username / Professional License ID */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                      Username / License ID / Work Email
-                    </label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="e.g. dr_abebe or ETH-MED-44129"
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Password */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
+                  {/* 2. DYNAMIC CLINICAL DEPARTMENT ROLES LISTED UNDER THE SELECTED HOSPITAL */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
                       <label className="block text-[11px] font-bold text-slate-300">
-                        Password
+                        2. Clinical Department & Staff Role at {selectedFacility.name?.split('(')[0]}:
                       </label>
-                      <span className="text-[10px] text-slate-500 font-mono">Demo: demo123</span>
+                      <span className="text-[10px] text-slate-400">Click to select role</span>
                     </div>
-                    <div className="relative">
-                      <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-9 pr-10 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar pr-0.5">
+                      {facilityRoles.map((roleItem) => {
+                        const isSelected = selectedRoleTitle === roleItem.roleTitle;
+                        return (
+                          <button
+                            key={roleItem.roleTitle}
+                            type="button"
+                            onClick={() => selectHospitalRole(roleItem)}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center gap-2.5 ${
+                              isSelected
+                                ? 'bg-sky-950/90 border-sky-500 text-white shadow-md ring-2 ring-sky-400/40'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-950'
+                            }`}
+                          >
+                            <span className="text-lg shrink-0">{roleItem.icon}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-xs text-white truncate">
+                                {roleItem.roleTitle}
+                              </div>
+                              <div className="text-[10px] text-slate-400 truncate">
+                                {roleItem.dept}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0"></span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Forgot Password Action */}
-                  <div className="flex justify-end">
+                  {/* 3. CREDENTIALS INPUTS (AUTO-CONFIGURED OR CUSTOM) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        Professional ID / Username
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          required
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="e.g. clinician.id or username"
+                          className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-[11px] font-bold text-slate-300">
+                          Password
+                        </label>
+                        <span className="text-[10px] text-slate-500 font-mono">Demo: demo123</span>
+                      </div>
+                      <div className="relative">
+                        <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full pl-9 pr-8 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Forgot Password Link */}
+                  <div className="flex justify-end pt-0.5">
                     <button
                       type="button"
                       onClick={() => {
                         setShowForgotModal(true);
                         setForgotStep(1);
-                        setForgotIdentifier(username || 'dr_abebe');
+                        setForgotIdentifier(username || 'clinician');
                         setForgotError('');
                         setForgotSuccess('');
                       }}
@@ -505,10 +589,10 @@ export default function LoginPage({
                     className="w-full py-2.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {loading ? (
-                      <span>Authenticating with Spine...</span>
+                      <span>Connecting to {selectedFacility.name?.split('(')[0]}...</span>
                     ) : (
                       <>
-                        <span>Sign In to Clinical Workspace</span>
+                        <span>Sign In as {selectedRoleTitle.split('/')[0]}</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
@@ -519,14 +603,14 @@ export default function LoginPage({
               {/* TAB 2: FAYDA NATIONAL ID & BIOMETRIC AUTH */}
               {authMode === 'FAYDA' && (
                 <div className="space-y-4">
-                  {/* Active Facility */}
+                  {/* Active Hospital */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                      Assigned Facility
+                      Assigned Healthcare Facility
                     </label>
                     <select
                       value={selectedFacilityId}
-                      onChange={(e) => setSelectedFacilityId(e.target.value)}
+                      onChange={(e) => handleFacilityChange(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-white focus:outline-none"
                     >
                       {facilities.map((fac) => (
@@ -591,7 +675,7 @@ export default function LoginPage({
                       onClick={() => handleSimulateBiometric('1985-7821-4923')}
                       className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
                     >
-                      {biometricScanning ? 'Scanning...' : '👆 Authenticate Thumbprint (Dr. Abebe)'}
+                      {biometricScanning ? 'Scanning...' : '👆 Authenticate Practitioner Biometric Thumbprint'}
                     </button>
                   </div>
 
@@ -605,33 +689,6 @@ export default function LoginPage({
                   </button>
                 </div>
               )}
-
-              {/* DEMO ACCOUNTS ACCORDION / ROLES */}
-              <div className="pt-2 border-t border-slate-800/80">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  Select Role to Auto-Fill:
-                </span>
-                <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
-                  {demoAccounts.map(acc => (
-                    <button
-                      key={acc.username}
-                      type="button"
-                      onClick={() => selectDemoAccount(acc)}
-                      className={`p-2 rounded-xl border text-left transition cursor-pointer ${
-                        username === acc.username
-                          ? 'bg-sky-950/60 border-sky-500/50 text-white'
-                          : 'bg-slate-950/40 border-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-slate-950'
-                      }`}
-                    >
-                      <div className="font-bold text-[11px] text-slate-200 truncate flex items-center gap-1">
-                        <span>{acc.icon}</span>
-                        <span>{acc.name}</span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate">{acc.role}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -696,8 +753,8 @@ export default function LoginPage({
                       required
                       value={forgotIdentifier}
                       onChange={(e) => setForgotIdentifier(e.target.value)}
-                      placeholder="e.g. dr_abebe or dr.abebe@jumc.edu.et"
-                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
+                      placeholder="e.g. physician.jmc or work email"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
                     />
                   </div>
                 </div>
