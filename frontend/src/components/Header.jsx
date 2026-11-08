@@ -5,7 +5,7 @@ import {
   ShieldAlert, BarChart3, Globe, Building2, UserCheck, Shield,
   KeyRound, Hospital, Bed, Calendar, Baby, Wifi, WifiOff,
   UploadCloud, CheckCircle2, ChevronDown, Plus, X, Layers,
-  Stethoscope, Clock, ShieldCheck
+  Stethoscope, Clock, ShieldCheck, Sparkles
 } from 'lucide-react';
 
 export default function Header({
