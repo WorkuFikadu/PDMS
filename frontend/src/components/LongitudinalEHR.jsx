@@ -41,6 +41,7 @@ export default function LongitudinalEHR({
   // Real-time Drug Safety Alerts State
   const [safetyAlerts, setSafetyAlerts] = useState([]);
   const [submittingEncounter, setSubmittingEncounter] = useState(false);
+  const [aiSoapLoading, setAiSoapLoading] = useState(false);
 
   // Break-glass form
   const [breakGlassReason, setBreakGlassReason] = useState('');
@@ -115,6 +116,38 @@ export default function LongitudinalEHR({
       setRxInput({ medication: '', dosage: '500 mg', route: 'ORAL', frequency: 'Once daily', duration: '30 days' });
     } catch (err) {
       console.error('Safety check failed:', err);
+    }
+  };
+
+  // AI SOAP Auto-fill
+  const handleAiAutoFillSoap = async () => {
+    if (!chiefComplaint) {
+      alert('Please enter a chief complaint first (e.g. "Follow-up for uncontrolled hypertension, morning headaches")');
+      return;
+    }
+    setAiSoapLoading(true);
+    try {
+      const res = await fetch('/api/ai/soap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patientId,
+          raw_text: `${chiefComplaint}. Vitals: BP ${vitals.bp}, pulse ${vitals.pulse}, temp ${vitals.temp}.`
+        })
+      });
+      const data = await res.json();
+      if (data.soap) {
+        setSoapNotes({
+          subjective: data.soap.subjective,
+          objective: data.soap.objective,
+          assessment: data.soap.assessment,
+          plan: data.soap.plan
+        });
+      }
+    } catch (e) {
+      alert('AI auto-fill error');
+    } finally {
+      setAiSoapLoading(false);
     }
   };
 
@@ -769,7 +802,18 @@ export default function LongitudinalEHR({
 
               {/* SOAP Notes */}
               <div className="space-y-3">
-                <span className="font-bold text-slate-700 block text-[11px] uppercase">SOAP Documentation</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 block text-[11px] uppercase">SOAP Documentation</span>
+                  <button
+                    type="button"
+                    onClick={handleAiAutoFillSoap}
+                    disabled={aiSoapLoading}
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-lg text-[10px] shadow-2xs transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                    <span>{aiSoapLoading ? 'AI Generating...' : 'AI Auto-Fill SOAP'}</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-600 font-medium mb-1">Subjective (Symptoms & History)</label>

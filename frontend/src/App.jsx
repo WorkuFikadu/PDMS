@@ -15,6 +15,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import PatientPortal from './components/PatientPortal';
 import AppointmentsModule from './components/AppointmentsModule';
 import MaternalChildModule from './components/MaternalChildModule';
+import AiClinicalHub from './components/AiClinicalHub';
 import { translations } from './i18n';
 
 export default function App() {
@@ -131,6 +132,17 @@ export default function App() {
               <CrossHospitalAccess
                 currentFacility={currentFacility}
                 currentUser={currentUser}
+                t={t}
+              />
+            )}
+
+            {/* AI Clinical Intelligence Hub */}
+            {activeTab === 'ai-hub' && (
+              <AiClinicalHub
+                currentFacility={currentFacility}
+                currentUser={currentUser}
+                patients={patients}
+                initialPatientId={selectedPatientId}
                 t={t}
               />
             )}

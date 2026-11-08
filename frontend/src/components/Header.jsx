@@ -105,6 +105,13 @@ export default function Header({
       category: 'clinical',
       badge: 'OTP'
     },
+    {
+      id: 'ai-hub',
+      label: t.navAiHub,
+      icon: Sparkles,
+      category: 'ai',
+      isAiBadge: true
+    },
     { id: 'timeline', label: t.navClinicalTimeline, icon: Activity, category: 'clinical' },
     { id: 'surgeries', label: t.navSurgeries, icon: Hospital, category: 'clinical' },
     { id: 'admissions', label: t.navAdmissions, icon: Bed, category: 'clinical' },
@@ -348,7 +355,18 @@ export default function Header({
                   : 'hover:bg-slate-200/70 text-slate-600'
               }`}
             >
-              {t.catAll} (14)
+              {t.catAll} (15)
+            </button>
+            <button
+              onClick={() => setNavCategory('ai')}
+              className={`px-2.5 py-1 rounded-lg transition whitespace-nowrap flex items-center gap-1 ${
+                navCategory === 'ai'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-2xs'
+                  : 'hover:bg-purple-100/70 text-purple-700 bg-purple-50 border border-purple-200'
+              }`}
+            >
+              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+              <span>{t.catAi}</span>
             </button>
             <button
               onClick={() => setNavCategory('clinical')}
@@ -414,6 +432,7 @@ export default function Header({
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             const isOtpHighlight = item.id === 'cross-hospital';
+            const isAiHighlight = item.id === 'ai-hub';
 
             return (
               <button
@@ -423,18 +442,31 @@ export default function Header({
                   isActive
                     ? isOtpHighlight
                       ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                      : isAiHighlight
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs font-bold'
                       : 'bg-sky-50 text-sky-700 border border-sky-200 font-bold'
                     : isOtpHighlight
                     ? 'text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100/80 font-bold'
+                    : isAiHighlight
+                    ? 'text-purple-900 bg-purple-50/90 hover:bg-purple-100 border border-purple-200/80 font-bold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${
                   isActive
-                    ? isOtpHighlight ? 'text-amber-300' : 'text-sky-600'
-                    : isOtpHighlight ? 'text-indigo-600' : 'text-slate-500'
+                    ? isOtpHighlight ? 'text-amber-300' : isAiHighlight ? 'text-amber-300 animate-pulse' : 'text-sky-600'
+                    : isOtpHighlight ? 'text-indigo-600' : isAiHighlight ? 'text-purple-600' : 'text-slate-500'
                 }`} />
                 <span>{item.label}</span>
+
+                {/* AI Badge */}
+                {item.isAiBadge && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                    isActive ? 'bg-amber-300 text-purple-950' : 'bg-purple-600 text-white'
+                  }`}>
+                    AI
+                  </span>
+                )}
 
                 {/* OTP Security Badge */}
                 {item.badge && (
