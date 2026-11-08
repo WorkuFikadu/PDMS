@@ -261,7 +261,162 @@ export default function LoginPage({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen relative text-slate-100 flex flex-col justify-between font-sans selection:bg-sky-500 selection:text-white overflow-hidden">
+
+      {/* ═══════════════════════════════════════════════════════════
+          DECORATIVE BACKGROUND SYSTEM
+      ═══════════════════════════════════════════════════════════ */}
+
+      {/* Base deep gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-[#020817] via-[#0a0f1f] to-[#060d1f] z-0" />
+
+      {/* Animated gradient orbs */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        {/* Primary orb — top-left teal/sky */}
+        <div
+          className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-25"
+          style={{
+            background: 'radial-gradient(circle, #0ea5e9 0%, #0284c7 30%, transparent 70%)',
+            animation: 'orb1 18s ease-in-out infinite alternate',
+          }}
+        />
+        {/* Secondary orb — bottom-right indigo */}
+        <div
+          className="absolute -bottom-60 -right-40 w-[700px] h-[700px] rounded-full opacity-20"
+          style={{
+            background: 'radial-gradient(circle, #6366f1 0%, #4338ca 30%, transparent 70%)',
+            animation: 'orb2 22s ease-in-out infinite alternate',
+          }}
+        />
+        {/* Accent orb — mid emerald */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-10"
+          style={{
+            background: 'radial-gradient(circle, #10b981 0%, #059669 30%, transparent 70%)',
+            animation: 'orb3 26s ease-in-out infinite alternate-reverse',
+          }}
+        />
+        {/* Top-right rose accent */}
+        <div
+          className="absolute -top-20 right-1/4 w-[400px] h-[400px] rounded-full opacity-10"
+          style={{
+            background: 'radial-gradient(circle, #f43f5e 0%, #be123c 30%, transparent 70%)',
+            animation: 'orb2 20s ease-in-out infinite alternate',
+          }}
+        />
+      </div>
+
+      {/* Dot-grid mesh overlay */}
+      <div
+        className="fixed inset-0 z-0 opacity-[0.07] pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #60a5fa 1px, transparent 1px)',
+          backgroundSize: '36px 36px',
+        }}
+      />
+
+      {/* Thin diagonal scan lines */}
+      <div
+        className="fixed inset-0 z-0 opacity-[0.04] pointer-events-none"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(135deg, #94a3b8 0px, transparent 1px, transparent 60px, #94a3b8 61px)',
+        }}
+      />
+
+      {/* Floating medical cross icons (decorative, non-interactive) */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none select-none">
+        {[
+          { top: '8%',  left: '4%',  size: 40, opacity: 0.06, delay: '0s',   dur: '12s' },
+          { top: '20%', left: '90%', size: 28, opacity: 0.05, delay: '3s',   dur: '16s' },
+          { top: '55%', left: '6%',  size: 20, opacity: 0.04, delay: '6s',   dur: '20s' },
+          { top: '75%', left: '85%', size: 36, opacity: 0.07, delay: '1s',   dur: '14s' },
+          { top: '40%', left: '94%', size: 18, opacity: 0.04, delay: '8s',   dur: '18s' },
+          { top: '88%', left: '20%', size: 32, opacity: 0.05, delay: '4s',   dur: '22s' },
+          { top: '65%', left: '50%', size: 14, opacity: 0.03, delay: '10s',  dur: '25s' },
+        ].map((c, i) => (
+          <svg
+            key={i}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="text-sky-400 absolute"
+            style={{
+              top: c.top, left: c.left,
+              width: c.size, height: c.size,
+              opacity: c.opacity,
+              animation: `floatIcon ${c.dur} ${c.delay} ease-in-out infinite alternate`,
+            }}
+          >
+            <path d="M11 2h2v7h7v2h-7v7h-2v-7H4v-2h7V2z"/>
+          </svg>
+        ))}
+
+        {/* Floating heart-pulse icons */}
+        {[
+          { top: '30%', left: '2%',  size: 22, opacity: 0.05, delay: '5s',  dur: '19s' },
+          { top: '10%', left: '75%', size: 18, opacity: 0.04, delay: '2s',  dur: '23s' },
+          { top: '82%', left: '60%', size: 26, opacity: 0.05, delay: '7s',  dur: '17s' },
+        ].map((c, i) => (
+          <svg
+            key={`h${i}`}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="text-rose-400 absolute"
+            style={{
+              top: c.top, left: c.left,
+              width: c.size, height: c.size,
+              opacity: c.opacity,
+              animation: `floatIcon ${c.dur} ${c.delay} ease-in-out infinite alternate`,
+            }}
+          >
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        ))}
+      </div>
+
+      {/* Top-center soft spotlight beam */}
+      <div
+        className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] z-0 pointer-events-none opacity-20"
+        style={{
+          background: 'conic-gradient(from 265deg at 50% -10%, transparent 20%, #0ea5e9 50%, transparent 80%)',
+          filter: 'blur(80px)',
+        }}
+      />
+
+      {/* Bottom fade vignette */}
+      <div
+        className="fixed bottom-0 inset-x-0 h-48 z-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to top, rgba(2,8,23,0.9) 0%, transparent 100%)',
+        }}
+      />
+
+      {/* Keyframe animation definitions */}
+      <style>{`
+        @keyframes orb1 {
+          0%   { transform: translate(0,0) scale(1); }
+          50%  { transform: translate(80px, 60px) scale(1.12); }
+          100% { transform: translate(40px, 100px) scale(0.95); }
+        }
+        @keyframes orb2 {
+          0%   { transform: translate(0,0) scale(1); }
+          50%  { transform: translate(-60px, -80px) scale(1.08); }
+          100% { transform: translate(-100px, -40px) scale(1.15); }
+        }
+        @keyframes orb3 {
+          0%   { transform: translate(-50%,-50%) scale(1); }
+          50%  { transform: translate(-45%,-55%) scale(1.1); }
+          100% { transform: translate(-55%,-45%) scale(0.9); }
+        }
+        @keyframes floatIcon {
+          0%   { transform: translateY(0px) rotate(0deg); }
+          50%  { transform: translateY(-18px) rotate(8deg); }
+          100% { transform: translateY(6px) rotate(-6deg); }
+        }
+      `}</style>
+
+      {/* All page content sits above bg layers */}
+      <div className="relative z-10 flex flex-col min-h-screen justify-between">
+
       {/* 1. TOP BRANDING BAR */}
       <header className="px-6 py-4 border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -957,6 +1112,7 @@ export default function LoginPage({
           </div>
         </div>
       )}
+      </div>{/* end z-10 wrapper */}
     </div>
   );
 }
