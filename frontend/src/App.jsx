@@ -309,16 +309,36 @@ export default function App() {
                   <div><strong>Facility:</strong> {currentUser?.facility_name || currentFacility?.name}</div>
                   <div><strong>Requested Module:</strong> {activeTab}</div>
                 </div>
-                <button
-                  onClick={() => setActiveTab(
-                    currentUser?.role === 'REGISTRATION_OFFICER' ? 'patients' :
-                    currentUser?.role === 'PHARMACIST' ? 'pharmacy' :
-                    currentUser?.role === 'LAB_TECH' ? 'diagnostics' : 'patients'
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setActiveTab(
+                      currentUser?.role === 'REGISTRATION_OFFICER' ? 'patients' :
+                      currentUser?.role === 'PHARMACIST' ? 'pharmacy' :
+                      currentUser?.role === 'LAB_TECH' ? 'diagnostics' : 'patients'
+                    )}
+                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition cursor-pointer"
+                  >
+                    Return to Clinical Workspace
+                  </button>
+                  {activeTab === 'admin' && (
+                    <button
+                      onClick={() => {
+                        const adminUser = users.find(u => u.role === 'SYSTEM_ADMIN' || u.role === 'FACILITY_ADMIN') || {
+                          id: 'USR-ADMIN-01',
+                          full_name: 'Worku Fikadu (Lead Admin)',
+                          role: 'SYSTEM_ADMIN',
+                          username: 'admin_worku'
+                        };
+                        setCurrentUser(adminUser);
+                        localStorage.setItem('npdms_auth_user', JSON.stringify(adminUser));
+                      }}
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Switch to Administrator (Governance Mode)</span>
+                    </button>
                   )}
-                  className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs transition shadow-xs cursor-pointer"
-                >
-                  Return to Authorized Clinical Workspace
-                </button>
+                </div>
               </div>
             ) : (
               <>
