@@ -493,6 +493,39 @@ app.post('/api/auth/login', (req, res) => {
     }
   }
 
+  // ── 2FA: Require OTP for HIGH-PRIVILEGE roles ───────────────────────
+  const ROLES_REQUIRING_2FA = ['SYSTEM_ADMIN', 'FACILITY_ADMIN', 'DOCTOR'];
+  const requires2FA = ROLES_REQUIRING_2FA.includes(user.role);
+
+  if (requires2FA) {
+    // Generate a 6-digit 2FA OTP, valid 10 minutes
+    const otp2fa = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000;
+    twoFaStore.set(user.id, { otp: otp2fa, expiresAt: expires, user });
+
+    // Send OTP via SMS gateway
+    const phone = user.phone || '+251911000000';
+    sendOtp(phone, otp2fa, user.full_name).catch(err =>
+      console.error('[2FA SMS] Error:', err.message)
+    );
+
+    const masked = phone.length >= 7
+      ? phone.slice(0, 4) + ' ••• ' + phone.slice(-4)
+      : '+251 ••• ••••';
+
+    recordAudit(user.id, user.full_name, user.role, user.facility_id, null, 'USER_LOGIN_2FA_REQUIRED', 'AUTHENTICATION', `2FA OTP sent to ${masked} for high-privilege role ${user.role}`);
+
+    return res.json({
+      success: true,
+      requires2FA: true,
+      userId: user.id,
+      maskedPhone: masked,
+      demoOtp: otp2fa,  // Remove in production
+      message: `Two-factor verification code sent to your registered Ethio Telecom number.`
+    });
+  }
+  // ────────────────────────────────────────────────────────────────────
+
   // Audit successful login
   recordAudit(
     user.id,
@@ -510,6 +543,78 @@ app.post('/api/auth/login', (req, res) => {
     user,
     token: 'jwt-npdms-token-' + crypto.randomUUID()
   });
+});
+
+// =============================================================
+// TWO-FACTOR AUTHENTICATION (2FA) — Step-up Verification
+// =============================================================
+const twoFaStore = new Map(); // userId → { otp, expiresAt, user }
+
+// POST /api/auth/2fa/verify — submit OTP to complete login
+app.post('/api/auth/2fa/verify', (req, res) => {
+  const { user_id, otp } = req.body;
+  if (!user_id || !otp) {
+    return res.status(400).json({ error: 'user_id and otp are required.' });
+  }
+
+  const record = twoFaStore.get(user_id);
+  if (!record) {
+    return res.status(401).json({ error: '2FA session expired or not found. Please login again.' });
+  }
+
+  if (Date.now() > record.expiresAt) {
+    twoFaStore.delete(user_id);
+    return res.status(401).json({ error: '2FA code expired. Please login again to receive a new code.' });
+  }
+
+  if (record.otp !== otp.trim()) {
+    // Log failed 2FA attempt as security event
+    broadcastThreatToGovernance({
+      threat_type: 'BRUTE_FORCE',
+      severity: 'HIGH',
+      source_ip: req.ip || '0.0.0.0',
+      endpoint: '/api/auth/2fa/verify',
+      method: 'POST',
+      user_agent: req.headers['user-agent'] || '',
+      payload_snippet: `Invalid 2FA OTP for user_id: ${user_id}`,
+      action_taken: 'BLOCKED_401'
+    });
+    return res.status(401).json({ error: 'Invalid verification code. Please try again.' });
+  }
+
+  // OTP correct — complete login
+  twoFaStore.delete(user_id);
+  const { user } = record;
+
+  recordAudit(user.id, user.full_name, user.role, user.facility_id, null, 'USER_LOGIN', 'AUTHENTICATION', `2FA verified — ${user.full_name} (${user.role}) completed two-factor authentication`);
+
+  res.json({
+    success: true,
+    requires2FA: false,
+    user,
+    token: 'jwt-npdms-2fa-' + crypto.randomUUID(),
+    message: 'Two-factor authentication successful. Access granted.'
+  });
+});
+
+// POST /api/auth/2fa/resend — resend OTP for active 2FA session
+app.post('/api/auth/2fa/resend', (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required.' });
+
+  const record = twoFaStore.get(user_id);
+  if (!record) return res.status(404).json({ error: '2FA session not found. Please login again.' });
+
+  const otp2fa = Math.floor(100000 + Math.random() * 900000).toString();
+  record.otp = otp2fa;
+  record.expiresAt = Date.now() + 10 * 60 * 1000;
+  twoFaStore.set(user_id, record);
+
+  const phone = record.user.phone || '+251911000000';
+  sendOtp(phone, otp2fa, record.user.full_name).catch(() => {});
+
+  const masked = phone.length >= 7 ? phone.slice(0, 4) + ' ••• ' + phone.slice(-4) : phone;
+  res.json({ success: true, maskedPhone: masked, demoOtp: otp2fa, message: 'New verification code sent.' });
 });
 
 // -------------------------------------------------------------
@@ -1465,7 +1570,71 @@ app.post('/api/labs/:id/publish', (req, res) => {
     `Published ${lab.test_name} result: ${result_value} ${units} (${interpretation})`
   );
 
-  res.json({ success: true, message: 'Investigation result verified and published.' });
+  // ── CRITICAL LAB ALERT AUTO-SMS ─────────────────────────────────────
+  // When a result is CRITICAL or PANIC, automatically alert the ordering clinician
+  // and the facility administrator via SMS through the national gateway.
+  if (interpretation === 'CRITICAL' || interpretation === 'PANIC' || interpretation === 'ABNORMAL') {
+    try {
+      // Look up the patient to get their details
+      const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(lab.patient_id);
+      // Look up the ordering clinician
+      const clinician = lab.ordered_by
+        ? db.prepare('SELECT * FROM users WHERE id = ?').get(lab.ordered_by)
+        : null;
+      // Look up facility admin
+      const admin = facility_id
+        ? db.prepare(`SELECT * FROM users WHERE facility_id = ? AND role IN ('FACILITY_ADMIN','SYSTEM_ADMIN') AND is_active = 1 LIMIT 1`).get(facility_id)
+        : null;
+
+      const isCritical = interpretation === 'CRITICAL' || interpretation === 'PANIC';
+      const alertPrefix = isCritical ? '🚨 CRITICAL LAB ALERT' : '⚠️ ABNORMAL LAB RESULT';
+      const patientName = patient ? `${patient.first_name} ${patient.father_name}` : 'Unknown Patient';
+      const alertMsg = `${alertPrefix} [NPDMS-MOH]: ${lab.test_name} = ${result_value} ${units || ''}. Patient: ${patientName} | NPDMS ID: ${patient?.npdms_id || 'N/A'}. Immediate clinical review required. — FDRE Ministry of Health`;
+
+      // Send to ordering clinician
+      if (clinician && clinician.phone) {
+        sendSms(clinician.phone, alertMsg, {
+          type: 'SECURITY_ALERT',
+          patientId: lab.patient_id,
+          userId: clinician.id
+        }).catch(err => console.error('[LAB-ALERT SMS] Clinician error:', err.message));
+      }
+
+      // Send to facility admin if critical
+      if (isCritical && admin && admin.phone) {
+        sendSms(admin.phone, alertMsg, {
+          type: 'SECURITY_ALERT',
+          patientId: lab.patient_id,
+          userId: admin.id
+        }).catch(err => console.error('[LAB-ALERT SMS] Admin error:', err.message));
+      }
+
+      // Log alert to governance
+      if (isCritical) {
+        broadcastThreatToGovernance({
+          threat_type: 'CRITICAL_LAB_ALERT',
+          severity: 'HIGH',
+          source_ip: 'INTERNAL',
+          endpoint: `/api/labs/${req.params.id}/publish`,
+          method: 'POST',
+          user_agent: 'LAB_SYSTEM',
+          payload_snippet: `${lab.test_name}: ${result_value} ${units} — Patient ${patient?.npdms_id}`,
+          action_taken: 'SMS_ALERT_SENT'
+        });
+      }
+
+      console.log(`[LAB-ALERT] ${interpretation} result dispatched via SMS gateway for ${lab.test_name}`);
+    } catch (alertErr) {
+      console.error('[LAB-ALERT] Auto-SMS error:', alertErr.message);
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────
+
+  res.json({
+    success: true,
+    message: 'Investigation result verified and published.',
+    alertSent: (interpretation === 'CRITICAL' || interpretation === 'PANIC' || interpretation === 'ABNORMAL')
+  });
 });
 
 // -------------------------------------------------------------

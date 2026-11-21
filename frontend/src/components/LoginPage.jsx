@@ -86,6 +86,15 @@ export default function LoginPage({
   const [faydaDemoOtp, setFaydaDemoOtp] = useState('');
   const [faydaOtpLoading, setFaydaOtpLoading] = useState(false);
 
+  // ── 2FA Step-Up State ───────────────────────────────────────────────
+  const [twoFaStep, setTwoFaStep] = useState(false);     // true = show 2FA OTP screen
+  const [twoFaUserId, setTwoFaUserId] = useState('');
+  const [twoFaOtp, setTwoFaOtp]     = useState('');
+  const [twoFaMasked, setTwoFaMasked] = useState('');
+  const [twoFaDemo, setTwoFaDemo]   = useState('');
+  const [twoFaLoading, setTwoFaLoading] = useState(false);
+  // ────────────────────────────────────────────────────────────────────
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -155,6 +164,15 @@ export default function LoginPage({
       const data = await res.json();
       if (!res.ok) {
         setErrorMsg(data.error || 'Authentication failed. Please verify credentials.');
+      } else if (data.requires2FA) {
+        // ── 2FA Required: show step-up screen ──────────────────────────
+        setTwoFaStep(true);
+        setTwoFaUserId(data.userId);
+        setTwoFaMasked(data.maskedPhone || '');
+        setTwoFaDemo(data.demoOtp || '');
+        setTwoFaOtp('');
+        setErrorMsg('');
+        // ────────────────────────────────────────────────────────────────
       } else {
         localStorage.setItem('npdms_auth_user', JSON.stringify(data.user));
         if (data.token) localStorage.setItem('npdms_auth_token', data.token);
@@ -166,6 +184,49 @@ export default function LoginPage({
       setLoading(false);
     }
   };
+
+  // ── 2FA OTP Submission ──────────────────────────────────────────────
+  const handle2FaVerify = async (e) => {
+    if (e) e.preventDefault();
+    if (!twoFaOtp.trim()) return;
+    setTwoFaLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await apiFetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: twoFaUserId, otp: twoFaOtp.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Invalid verification code. Please try again.');
+      } else {
+        localStorage.setItem('npdms_auth_user', JSON.stringify(data.user));
+        if (data.token) localStorage.setItem('npdms_auth_token', data.token);
+        onLoginSuccess(data.user);
+      }
+    } catch (err) {
+      setErrorMsg('Network error. Please try again.');
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
+  const handle2FaResend = async () => {
+    try {
+      const res = await apiFetch('/api/auth/2fa/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: twoFaUserId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTwoFaDemo(data.demoOtp || '');
+        setErrorMsg('');
+      }
+    } catch {}
+  };
+  // ────────────────────────────────────────────────────────────────────
 
   const handleFaydaLogin = async (overrideFin, isBiometric = false) => {
     setErrorMsg('');
@@ -688,8 +749,85 @@ export default function LoginPage({
                 </div>
               )}
 
+              {/* ── 2FA STEP-UP MODAL / OVERLAY ── */}
+              {twoFaStep && (
+                <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+                      🛡️
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                        <span>Two-Factor Authentication (2FA)</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-mono">STEP-UP</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-300">
+                        High-privilege role verified. One-time passcode sent via Ethio Telecom SMS to <span className="font-mono text-white font-bold">{twoFaMasked || '+251 9•• ••••'}</span>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {twoFaDemo && (
+                    <div className="p-2.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-center justify-between">
+                      <span>Simulated Telecom SMS OTP:</span>
+                      <button
+                        type="button"
+                        onClick={() => setTwoFaOtp(twoFaDemo)}
+                        className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 font-mono font-bold rounded cursor-pointer text-amber-200"
+                      >
+                        Auto-fill: {twoFaDemo}
+                      </button>
+                    </div>
+                  )}
+
+                  <form onSubmit={handle2FaVerify} className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        Enter 6-Digit Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        required
+                        value={twoFaOtp}
+                        onChange={(e) => setTwoFaOtp(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••••"
+                        className="w-full text-center tracking-[0.5em] py-2.5 bg-slate-950 border border-amber-500/50 rounded-xl text-lg font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setTwoFaStep(false); setTwoFaOtp(''); }}
+                        className="w-1/3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={twoFaLoading || twoFaOtp.length < 6}
+                        className="flex-1 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {twoFaLoading ? 'Verifying...' : 'Verify & Enter Clinical Portal'}
+                      </button>
+                    </div>
+
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={handle2FaResend}
+                        className="text-[11px] text-amber-400 hover:underline cursor-pointer"
+                      >
+                        Didn't receive code? Resend SMS OTP
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
               {/* TAB 1: HOSPITAL-FIRST CREDENTIALS FORM */}
-              {authMode === 'CREDENTIALS' && (
+              {!twoFaStep && authMode === 'CREDENTIALS' && (
                 <form onSubmit={handleStandardLogin} className="space-y-4">
                   
                   {/* 1. SELECT TARGET HEALTH FACILITY (HOSPITAL NAME) */}
