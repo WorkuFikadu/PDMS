@@ -3989,6 +3989,140 @@ app.get('/api/admin/export/staff', (req, res) => {
   }
 });
 
+// =============================================================
+// STEP 4 — PostgreSQL Migration: DB Health Check Endpoint
+// =============================================================
+app.get('/api/admin/database/status', (req, res) => {
+  const isPostgres = !!process.env.DATABASE_URL;
+  const mode       = isPostgres ? 'POSTGRESQL_PRODUCTION' : 'SQLITE_LOCAL_DEV';
+  try {
+    const counts = {
+      patients:  db.prepare('SELECT COUNT(*) as c FROM patients').get().c,
+      users:     db.prepare('SELECT COUNT(*) as c FROM users').get().c,
+      facilities:db.prepare('SELECT COUNT(*) as c FROM facilities').get().c,
+      encounters:db.prepare('SELECT COUNT(*) as c FROM encounters').get().c,
+      audit_logs:db.prepare('SELECT COUNT(*) as c FROM audit_logs').get().c,
+    };
+    res.json({
+      mode,
+      status: 'CONNECTED',
+      engine: isPostgres ? 'PostgreSQL 14+ (Neon Serverless)' : 'SQLite (node:sqlite)',
+      database_url_set: isPostgres,
+      schema_version: '2026-11-21',
+      record_counts: counts,
+      migration_guide: 'Set DATABASE_URL env var to your Neon/Supabase connection string to activate PostgreSQL mode.',
+      schema_file: '/backend/schema-postgres.sql'
+    });
+  } catch (err) {
+    res.status(500).json({ mode, status: 'ERROR', error: err.message });
+  }
+});
+
+// =============================================================
+// STEP 5 — DHIS2 / NHDIS Interoperability Export
+// =============================================================
+
+// GET /api/admin/export/dhis2 — DHIS2 aggregate data value set (JSON)
+app.get('/api/admin/export/dhis2', (req, res) => {
+  try {
+    const period = req.query.period || new Date().toISOString().slice(0, 7).replace('-', ''); // e.g. 202611
+
+    // Aggregate patient counts by region
+    const byRegion = db.prepare(`
+      SELECT region, COUNT(*) as patients,
+             SUM(CASE WHEN gender = 'FEMALE' THEN 1 ELSE 0 END) as female_patients,
+             SUM(CASE WHEN gender = 'MALE' THEN 1 ELSE 0 END) as male_patients
+      FROM patients GROUP BY region ORDER BY patients DESC
+    `).all();
+
+    // Encounter counts by facility
+    const byFacility = db.prepare(`
+      SELECT f.name as facility_name, f.code as facility_code, f.region,
+             COUNT(e.id) as encounters,
+             SUM(CASE WHEN e.encounter_type = 'OUTPATIENT' THEN 1 ELSE 0 END) as outpatient,
+             SUM(CASE WHEN e.encounter_type = 'INPATIENT' THEN 1 ELSE 0 END) as inpatient,
+             SUM(CASE WHEN e.encounter_type = 'EMERGENCY' THEN 1 ELSE 0 END) as emergency
+      FROM encounters e JOIN facilities f ON e.facility_id = f.id
+      GROUP BY f.id, f.name, f.code, f.region ORDER BY encounters DESC
+    `).all();
+
+    // Build DHIS2 aggregate dataValueSet payload
+    const dataValues = [];
+
+    // Mandatory DHIS2 data elements (use real UIDs from your DHIS2 instance)
+    byRegion.forEach(r => {
+      const orgUnitCode = `ET_${r.region.toUpperCase().replace(/\s+/g, '_').slice(0, 15)}`;
+      dataValues.push(
+        { dataElement: 'npdms_total_patients',  period, orgUnit: orgUnitCode, value: r.patients },
+        { dataElement: 'npdms_female_patients', period, orgUnit: orgUnitCode, value: r.female_patients },
+        { dataElement: 'npdms_male_patients',   period, orgUnit: orgUnitCode, value: r.male_patients }
+      );
+    });
+
+    byFacility.forEach(f => {
+      const orgUnit = `ET_FAC_${f.facility_code}`;
+      dataValues.push(
+        { dataElement: 'npdms_outpatient_encounters', period, orgUnit, value: f.outpatient || 0 },
+        { dataElement: 'npdms_inpatient_encounters',  period, orgUnit, value: f.inpatient  || 0 },
+        { dataElement: 'npdms_emergency_encounters',  period, orgUnit, value: f.emergency  || 0 }
+      );
+    });
+
+    // Record audit
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', 'SYS', null, 'EXPORT_DHIS2', 'DHIS2_AGGREGATE_EXPORT', `DHIS2 aggregate export generated for period ${period}`);
+
+    res.json({
+      dataValueSet: {
+        dataSet: 'NPDMS_National_Health_Indicators',
+        completeDate: new Date().toISOString().slice(0, 10),
+        period,
+        orgUnit: 'ET_MOH',
+        attributeOptionCombo: 'default',
+        dataValues
+      },
+      meta: {
+        generated_at: new Date().toISOString(),
+        period,
+        region_count: byRegion.length,
+        facility_count: byFacility.length,
+        data_value_count: dataValues.length,
+        format: 'DHIS2_ADX_v2.4',
+        source: 'FDRE Ministry of Health — NPDMS National Spine',
+        note: 'Replace dataElement UIDs with your DHIS2 instance UIDs before importing.'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/export/dhis2/csv — flat CSV for DHIS2 Importer UI
+app.get('/api/admin/export/dhis2/csv', (req, res) => {
+  try {
+    const period = req.query.period || new Date().toISOString().slice(0, 7).replace('-', '');
+    const byRegion = db.prepare(`
+      SELECT region, COUNT(*) as patients,
+             SUM(CASE WHEN gender = 'FEMALE' THEN 1 ELSE 0 END) as female_patients,
+             SUM(CASE WHEN gender = 'MALE' THEN 1 ELSE 0 END) as male_patients
+      FROM patients GROUP BY region
+    `).all();
+
+    const csvRows = ['dataelement,period,orgunit,categoryoptioncombo,attributeoptioncombo,value'];
+    byRegion.forEach(r => {
+      const orgUnit = `ET_${r.region.toUpperCase().replace(/\s+/g, '_').slice(0, 15)}`;
+      csvRows.push(`npdms_total_patients,${period},${orgUnit},default,default,${r.patients}`);
+      csvRows.push(`npdms_female_patients,${period},${orgUnit},default,default,${r.female_patients}`);
+      csvRows.push(`npdms_male_patients,${period},${orgUnit},default,default,${r.male_patients}`);
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="NPDMS_DHIS2_Export_${period}.csv"`);
+    res.send(csvRows.join('\n'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`=======================================================`);

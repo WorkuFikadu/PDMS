@@ -1169,6 +1169,59 @@ export default function AdminDashboard({ currentUser, t }) {
                 Export Staff Directory (.CSV)
               </a>
             </div>
+
+            {/* Export 4: DHIS2 JSON */}
+            <div className="bg-white p-5 rounded-xl border border-indigo-200 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">DHIS2 / NHDIS Aggregate Export</h3>
+                <p className="text-xs text-slate-500">
+                  Exports patient counts, encounter volumes, and regional health indicators in DHIS2 ADX v2.4 format for submission to National Health Data and Information System.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <a
+                  href="/api/admin/export/dhis2"
+                  download={`NPDMS_DHIS2_Export_${new Date().toISOString().slice(0,7)}.json`}
+                  className="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export DHIS2 Payload (.JSON)
+                </a>
+                <a
+                  href="/api/admin/export/dhis2/csv"
+                  download={`NPDMS_DHIS2_Export_${new Date().toISOString().slice(0,7)}.csv`}
+                  className="w-full py-2 px-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export DHIS2 Importer (.CSV)
+                </a>
+              </div>
+            </div>
+
+            {/* Export 5: Database Status */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Database className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">Database Migration Status</h3>
+                <p className="text-xs text-slate-500">
+                  Check database engine mode (SQLite local dev vs PostgreSQL production). Set <code className="bg-slate-100 px-1 rounded">DATABASE_URL</code> in Vercel to activate Neon/Supabase production database.
+                </p>
+              </div>
+              <a
+                href="/api/admin/database/status"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2.5 px-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition shadow-xs"
+              >
+                <Server className="w-3.5 h-3.5" />
+                View DB Engine Status
+              </a>
+            </div>
           </div>
         </div>
       )}
