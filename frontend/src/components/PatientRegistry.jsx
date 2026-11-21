@@ -246,14 +246,12 @@ export default function PatientRegistry({
             className="px-2.5 py-1 bg-slate-800/90 hover:bg-sky-900/60 text-sky-300 border border-slate-700 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>1985-7821-4923</span>
-            <span className="text-[10px] text-slate-400 font-sans font-normal">(Kemal)</span>
           </button>
           <button
             onClick={() => setSearchTerm('2001-9984-5512')}
             className="px-2.5 py-1 bg-slate-800/90 hover:bg-sky-900/60 text-sky-300 border border-slate-700 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>2001-9984-5512</span>
-            <span className="text-[10px] text-slate-400 font-sans font-normal">(Chaltu)</span>
           </button>
         </div>
       </div>
@@ -518,9 +516,9 @@ export default function PatientRegistry({
                   <div className="space-y-2">
                     <p className="text-xs text-slate-600">
                       {t.faydaFinPrompt}. Quick Demo FINs:{' '}
-                      <button type="button" onClick={() => executeFaydaLookup('1985-7821-4923')} className="underline text-sky-700 font-mono font-bold cursor-pointer">1985-7821-4923</button> (Kemal),{' '}
-                      <button type="button" onClick={() => executeFaydaLookup('2001-3847-1920')} className="underline text-sky-700 font-mono font-bold cursor-pointer">2001-3847-1920</button> (Chaltu),{' '}
-                      <button type="button" onClick={() => executeFaydaLookup('1992-6612-4410')} className="underline text-sky-700 font-mono font-bold cursor-pointer">1992-6612-4410</button> (Gudeta).
+                      <button type="button" onClick={() => executeFaydaLookup('1985-7821-4923')} className="underline text-sky-700 font-mono font-bold cursor-pointer">1985-7821-4923</button>,{' '}
+                      <button type="button" onClick={() => executeFaydaLookup('2001-3847-1920')} className="underline text-sky-700 font-mono font-bold cursor-pointer">2001-3847-1920</button>,{' '}
+                      <button type="button" onClick={() => executeFaydaLookup('1992-6612-4410')} className="underline text-sky-700 font-mono font-bold cursor-pointer">1992-6612-4410</button>.
                     </p>
                     <div className="flex gap-2">
                       <input
@@ -562,21 +560,21 @@ export default function PatientRegistry({
                             onClick={() => executeFaydaLookup('1985-7821-4923')}
                             className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white font-mono rounded-lg text-[11px] font-bold transition cursor-pointer"
                           >
-                            📷 Scan Kemal's Fayda QR
+                            📷 Scan Demo FIN 1985-7821-4923
                           </button>
                           <button
                             type="button"
                             onClick={() => executeFaydaLookup('2001-3847-1920')}
                             className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-mono rounded-lg text-[11px] font-bold transition cursor-pointer"
                           >
-                            📷 Scan Chaltu's Fayda QR
+                            📷 Scan Demo FIN 2001-3847-1920
                           </button>
                           <button
                             type="button"
                             onClick={() => executeFaydaLookup('1992-6612-4410')}
                             className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-mono rounded-lg text-[11px] font-bold transition cursor-pointer"
                           >
-                            📷 Scan Gudeta's Fayda QR
+                            📷 Scan Demo FIN 1992-6612-4410
                           </button>
                         </div>
                       </div>
@@ -625,7 +623,7 @@ export default function PatientRegistry({
                           disabled={biometricScanning}
                           className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
                         >
-                          {biometricScanning ? 'Scanning...' : 'Scan Thumb (Kemal)'}
+                          {biometricScanning ? 'Scanning...' : 'Scan Thumb (Demo FIN 1985)'}
                         </button>
                         <button
                           type="button"
@@ -633,7 +631,7 @@ export default function PatientRegistry({
                           disabled={biometricScanning}
                           className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition cursor-pointer disabled:opacity-50"
                         >
-                          {biometricScanning ? 'Scanning...' : 'Scan Thumb (Chaltu)'}
+                          {biometricScanning ? 'Scanning...' : 'Scan Thumb (Demo FIN 2001)'}
                         </button>
                       </div>
                     </div>

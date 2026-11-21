@@ -17,6 +17,7 @@ import PatientPortal from './components/PatientPortal';
 import AppointmentsModule from './components/AppointmentsModule';
 import MaternalChildModule from './components/MaternalChildModule';
 import AiClinicalHub from './components/AiClinicalHub';
+import AdminDashboard from './components/AdminDashboard';
 import HospitalNetworkModule from './components/HospitalNetworkModule';
 import EmergencyBloodBank from './components/EmergencyBloodBank';
 import LoginPage from './components/LoginPage';
@@ -26,7 +27,8 @@ import { CheckCircle2, Stethoscope, X } from 'lucide-react';
 
 export default function App() {
   const [lang, setLang] = useState('en');
-  const [activeTab, setActiveTab] = useState('patients');
+  const [activeTab, setActiveTab] = useState('patients'); // added admin dashboard tab
+  const adminTabs = ['admin'];
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -186,9 +188,12 @@ export default function App() {
       setActiveTab('admissions');
     } else if (user.role === 'REGISTRATION_OFFICER') {
       setActiveTab('patients');
-    } else if (user.role === 'FACILITY_ADMIN' || user.role === 'SYSTEM_ADMIN') {
+    } else if (user.role === 'FACILITY_ADMIN') {
       setActiveTab('hospital-network');
+    } else if (user.role === 'SYSTEM_ADMIN') {
+      setActiveTab('admin');
     } else {
+
       setActiveTab('timeline'); // DOCTOR / CONSULTANT lands directly on Longitudinal EHR
     }
   };
@@ -249,6 +254,8 @@ export default function App() {
         setSearchTerm={setSearchTerm}
         onOpenOfflineModal={() => setShowOfflineModal(true)}
         onLogout={handleLogout}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
 
       {/* Sync Success Toast */}
@@ -320,6 +327,12 @@ export default function App() {
                     currentFacility={currentFacility}
                     currentUser={currentUser}
                     onRefresh={handleRefreshPatients}
+                    t={t}
+                  />
+                )}
+                {activeTab === 'admin' && (
+                  <AdminDashboard
+                    currentUser={currentUser}
                     t={t}
                   />
                 )}

@@ -3144,6 +3144,212 @@ app.get('/api/routes', (req, res) => {
   });
 });
 
+// =============================================================
+// 14. ADMIN GOVERNANCE PANEL — Full System Control Endpoints
+// =============================================================
+
+// GET /api/admin/overview — System-wide KPIs for the master control panel
+app.get('/api/admin/overview', (req, res) => {
+  try {
+    const totalPatients    = db.prepare('SELECT COUNT(*) as c FROM patients').get().c;
+    const faydaVerified    = db.prepare("SELECT COUNT(*) as c FROM patients WHERE fayda_status = 'VERIFIED'").get().c;
+    const totalEncounters  = db.prepare('SELECT COUNT(*) as c FROM encounters').get().c;
+    const activeAdmissions = db.prepare("SELECT COUNT(*) as c FROM admissions WHERE status = 'ADMITTED'").get().c;
+    const pendingReferrals = db.prepare("SELECT COUNT(*) as c FROM referrals WHERE status = 'PENDING'").get().c;
+    const activeRx         = db.prepare("SELECT COUNT(*) as c FROM prescriptions WHERE status = 'ACTIVE'").get().c;
+    const pendingLabs      = db.prepare("SELECT COUNT(*) as c FROM lab_investigations WHERE status = 'ORDERED'").get().c;
+    const pendingDups      = db.prepare("SELECT COUNT(*) as c FROM duplicate_reviews WHERE status = 'PENDING_REVIEW'").get().c;
+    const breakGlassCount  = db.prepare("SELECT COUNT(*) as c FROM audit_logs WHERE action = 'BREAK_GLASS'").get().c;
+    const totalStaff       = db.prepare("SELECT COUNT(*) as c FROM users WHERE is_active = 1").get().c;
+    const totalFacilities  = db.prepare("SELECT COUNT(*) as c FROM facilities WHERE is_active = 1").get().c;
+    const auditEventsToday = db.prepare("SELECT COUNT(*) as c FROM audit_logs WHERE date(created_at) = date('now')").get().c;
+
+    // Recent audit logs (last 10)
+    const recentAudit = db.prepare(`
+      SELECT id, user_name, user_role, action, resource_type, facility_id, patient_id, created_at
+      FROM audit_logs ORDER BY created_at DESC LIMIT 10
+    `).all();
+
+    // Facility breakdown with full stats
+    const facilities = db.prepare(`
+      SELECT f.id, f.name, f.code, f.type, f.region, f.bed_capacity, f.is_active, f.fayda_connected,
+        (SELECT COUNT(*) FROM patients p WHERE p.created_facility_id = f.id) as patient_count,
+        (SELECT COUNT(*) FROM encounters e WHERE e.facility_id = f.id) as encounter_count,
+        (SELECT COUNT(*) FROM users u WHERE u.facility_id = f.id AND u.is_active = 1) as staff_count,
+        (SELECT COUNT(*) FROM admissions a WHERE a.facility_id = f.id AND a.status = 'ADMITTED') as active_admissions,
+        (SELECT COUNT(*) FROM referrals r WHERE r.from_facility_id = f.id) as outgoing_referrals
+      FROM facilities f
+      ORDER BY f.is_active DESC, f.type ASC, f.name ASC
+    `).all();
+
+    // Staff breakdown by role
+    const staffByRole = db.prepare(`
+      SELECT role, COUNT(*) as count FROM users WHERE is_active = 1 GROUP BY role ORDER BY count DESC
+    `).all();
+
+    // Top ICD-10 diagnoses
+    const topDiagnoses = db.prepare(`
+      SELECT icd10_code, condition_name, COUNT(*) as count
+      FROM diagnoses GROUP BY icd10_code ORDER BY count DESC LIMIT 8
+    `).all();
+
+    // Encounter trend by encounter type
+    const encountersByType = db.prepare(`
+      SELECT encounter_type, COUNT(*) as count FROM encounters GROUP BY encounter_type
+    `).all();
+
+    // Referral status breakdown
+    const referralsByStatus = db.prepare(`
+      SELECT status, COUNT(*) as count FROM referrals GROUP BY status
+    `).all();
+
+    res.json({
+      kpis: {
+        totalPatients, faydaVerified,
+        faydaRate: totalPatients > 0 ? Math.round((faydaVerified / totalPatients) * 100) : 0,
+        totalEncounters, activeAdmissions, pendingReferrals,
+        activeRx, pendingLabs, pendingDups, breakGlassCount,
+        totalStaff, totalFacilities, auditEventsToday
+      },
+      facilities,
+      staffByRole,
+      topDiagnoses,
+      encountersByType,
+      referralsByStatus,
+      recentAudit
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/users — List all system users with facility info
+app.get('/api/admin/users', (req, res) => {
+  try {
+    const users = db.prepare(`
+      SELECT u.id, u.username, u.full_name, u.role, u.professional_id, u.email, u.phone,
+             u.is_active, f.name as facility_name, f.code as facility_code, f.region as facility_region
+      FROM users u
+      LEFT JOIN facilities f ON u.facility_id = f.id
+      ORDER BY u.is_active DESC, u.role ASC, u.full_name ASC
+    `).all();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/users — Create a new staff account
+app.post('/api/admin/users', (req, res) => {
+  try {
+    const { username, full_name, role, facility_id, professional_id, email, phone } = req.body;
+    if (!username || !full_name || !role) return res.status(400).json({ error: 'username, full_name, and role are required.' });
+    const id = 'USR-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+    db.prepare(`
+      INSERT INTO users (id, username, password_hash, full_name, role, facility_id, professional_id, email, phone, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(id, username.trim(), 'npdms2026', full_name.trim(), role, facility_id || null, professional_id || null, email || null, phone || null);
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', facility_id || 'SYS', null, 'CREATE_USER', 'USER', `Created new staff account: ${full_name} (${role})`);
+    res.json({ success: true, id, message: `Staff account for ${full_name} created successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/users/:id — Update or toggle user active status
+app.put('/api/admin/users/:id', (req, res) => {
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    const { full_name, role, facility_id, email, phone, is_active } = req.body;
+    db.prepare(`
+      UPDATE users SET
+        full_name = COALESCE(?, full_name),
+        role = COALESCE(?, role),
+        facility_id = COALESCE(?, facility_id),
+        email = COALESCE(?, email),
+        phone = COALESCE(?, phone),
+        is_active = COALESCE(?, is_active)
+      WHERE id = ?
+    `).run(full_name || null, role || null, facility_id || null, email || null, phone || null, is_active !== undefined ? (is_active ? 1 : 0) : null, req.params.id);
+    const action = is_active === false ? 'DEACTIVATE_USER' : 'UPDATE_USER';
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', 'SYS', null, action, 'USER', `Updated staff: ${user.full_name}`);
+    res.json({ success: true, message: `User ${user.full_name} updated.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/facilities/:id — Toggle facility active status or update details
+app.put('/api/admin/facilities/:id', (req, res) => {
+  try {
+    const fac = db.prepare('SELECT * FROM facilities WHERE id = ?').get(req.params.id);
+    if (!fac) return res.status(404).json({ error: 'Facility not found.' });
+    const { is_active, fayda_connected, nhdis_connected, bed_capacity, director_name } = req.body;
+    db.prepare(`
+      UPDATE facilities SET
+        is_active = COALESCE(?, is_active),
+        fayda_connected = COALESCE(?, fayda_connected),
+        nhdis_connected = COALESCE(?, nhdis_connected),
+        bed_capacity = COALESCE(?, bed_capacity),
+        director_name = COALESCE(?, director_name)
+      WHERE id = ?
+    `).run(
+      is_active !== undefined ? (is_active ? 1 : 0) : null,
+      fayda_connected !== undefined ? (fayda_connected ? 1 : 0) : null,
+      nhdis_connected !== undefined ? (nhdis_connected ? 1 : 0) : null,
+      bed_capacity || null, director_name || null,
+      req.params.id
+    );
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', req.params.id, null, 'UPDATE_FACILITY', 'FACILITY', `Updated facility: ${fac.name}`);
+    res.json({ success: true, message: `${fac.name} updated.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/audit-logs — Full audit log export with filters
+app.get('/api/admin/audit-logs', (req, res) => {
+  try {
+    const { action, facility_id, limit = 100, offset = 0 } = req.query;
+    let sql = `
+      SELECT id, user_id, user_name, user_role, facility_id, patient_id,
+             action, resource_type, justification, ip_address, created_at
+      FROM audit_logs WHERE 1=1
+    `;
+    const params = [];
+    if (action) { sql += ' AND action = ?'; params.push(action); }
+    if (facility_id) { sql += ' AND facility_id = ?'; params.push(facility_id); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(Number(limit), Number(offset));
+    const logs = db.prepare(sql).all(...params);
+    const total = db.prepare('SELECT COUNT(*) as c FROM audit_logs').get().c;
+    res.json({ logs, total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/system-health — Runtime & DB health metrics
+app.get('/api/admin/system-health', (req, res) => {
+  try {
+    const dbSize = db.prepare('SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()').get();
+    const tableStats = ['patients','encounters','users','facilities','prescriptions','lab_investigations','referrals','admissions','audit_logs','appointments']
+      .map(t => ({ table: t, rows: db.prepare(`SELECT COUNT(*) as c FROM ${t}`).get().c }));
+    res.json({
+      status: 'OPERATIONAL',
+      uptime_seconds: Math.floor(process.uptime()),
+      node_version: process.version,
+      memory_mb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      db_size_bytes: dbSize?.size || 0,
+      tableStats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`=======================================================`);
@@ -3151,6 +3357,7 @@ if (!process.env.VERCEL) {
     console.log(` Backend Service running on port ${PORT}`);
     console.log(` HL7 FHIR R4 Ready | Fayda Mock Service Active`);
     console.log(` OTP Cross-Hospital Authorization Gateway ENABLED`);
+    console.log(` Admin Governance Panel API ENABLED`);
     console.log(`=======================================================`);
   });
 }

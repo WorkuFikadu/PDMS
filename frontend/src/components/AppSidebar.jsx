@@ -3,7 +3,7 @@ import React from 'react';
 import {
   Users, KeyRound, Sparkles, Activity, Hospital, Bed,
   Share2, Calendar, Baby, Pill, FlaskConical, ShieldAlert,
-  Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network, Droplets
+  Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network, Droplets, Settings
 } from 'lucide-react';
 
 export default function AppSidebar({
@@ -47,6 +47,7 @@ export default function AppSidebar({
         { id: 'audit', label: t.navAudit, icon: Shield },
         { id: 'analytics', label: t.navAnalytics, icon: BarChart3 },
         { id: 'hospital-network', label: 'Hospital Network', icon: Network, badge: 'NEW', badgeColor: 'bg-sky-600 text-white' },
+        { id: 'admin', label: t.navAdmin, icon: Settings, badge: 'ADMIN', badgeColor: 'bg-red-600 text-white' },
         { id: 'patient-portal', label: t.navPatientPortal, icon: FileText }
       ]
     }

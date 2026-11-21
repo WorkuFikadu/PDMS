@@ -283,7 +283,7 @@ export default function CrossHospitalAccess({
               placeholder={
                 searchType === 'npdms_id' ? 'e.g. ETH-NPDMS-2026-004128' :
                 searchType === 'fayda_fin' ? 'e.g. 1985-7821-4923' :
-                'e.g. Kemal Mohammed or +251-91...'
+                'e.g. National ID or Mobile (+251-91...)'
               }
               className="flex-1 px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition font-mono"
             />
@@ -305,12 +305,12 @@ export default function CrossHospitalAccess({
 
           {/* Demo Quick Access Panel */}
           <div className="p-4 bg-sky-50 border border-sky-100 rounded-xl space-y-2 text-xs">
-            <span className="font-bold text-sky-900 block">Quick Demo Patients:</span>
+            <span className="font-bold text-sky-900 block">Sample National Health Records:</span>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: 'Kemal Mohammed (PAT-001)', id: 'ETH-NPDMS-2026-004128' },
-                { label: 'Chaltu Desta (PAT-002)', id: 'ETH-NPDMS-2026-009845' },
-                { label: 'Almaz Hailu (PAT-005)', id: 'ETH-NPDMS-2026-007742' }
+                { label: 'Patient Record #004128 (JMC / TASH)', id: 'ETH-NPDMS-2026-004128' },
+                { label: 'Patient Record #009845 (Shenen Gibe)', id: 'ETH-NPDMS-2026-009845' },
+                { label: 'Patient Record #007742 (Addis Ababa)', id: 'ETH-NPDMS-2026-007742' }
               ].map(demo => (
                 <button
                   key={demo.id}

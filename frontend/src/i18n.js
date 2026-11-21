@@ -16,7 +16,8 @@ export const translations = {
     navDiagnostics: 'Lab & Imaging',
     navDuplicateQueue: 'Duplicate Review Queue',
     navAudit: 'Security & Audit Trail',
-    navAnalytics: 'Facility Analytics',
+
+  navAdmin: 'Governance & Admin Panel',
     navPatientPortal: 'Patient Portal',
     navAiHub: 'AI Clinical Hub',
     navMore: 'More Modules',
