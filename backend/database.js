@@ -424,6 +424,21 @@ function initDatabase() {
       reported_to_governance INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    -- SMS GATEWAY LOG: All outbound SMS messages (OTP, Alerts, Notifications)
+    CREATE TABLE IF NOT EXISTS sms_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      to_phone TEXT NOT NULL,
+      message TEXT NOT NULL,
+      type TEXT DEFAULT 'GENERAL',   -- OTP, SECURITY_ALERT, APPOINTMENT, GENERAL
+      patient_id TEXT,
+      user_id TEXT,
+      status TEXT DEFAULT 'PENDING', -- SIMULATED, Success, FAILED, PENDING
+      message_id TEXT,               -- AfricasTalking message ID
+      cost TEXT,
+      simulated INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
   console.log('NPDMS Database schema initialized successfully.');
 
@@ -446,5 +461,6 @@ function initDatabase() {
 
 module.exports = {
   db,
+  getDb: () => db,
   initDatabase
 };

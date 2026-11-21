@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { db, initDatabase } = require('./database');
 const crypto = require('crypto');
+const { sendOtp, sendSecurityAlert, getSmsLogs } = require('./sms');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -561,13 +562,10 @@ app.post('/api/auth/fayda-otp/send', (req, res) => {
     ? rawPhone.slice(0, 4) + ' ••• ' + rawPhone.slice(-4)
     : '+251 ••• ••••';
 
-  // Simulate SMS delivery log
-  try {
-    db.prepare(`
-      INSERT INTO sms_logs (patient_id, phone_number, message_type, message_text, language, delivery_status, sent_at)
-      VALUES (NULL, ?, 'FAYDA_OTP', ?, 'en', 'SIMULATED', datetime('now'))
-    `).run(rawPhone, `[NPDMS Fayda Auth] Your one-time login code is ${otp}. Valid 10 minutes. Do not share.`);
-  } catch (_) { /* sms_logs table may not exist on older schemas */ }
+  // Send OTP via SMS Gateway (AfricasTalking real / simulation fallback)
+  sendOtp(rawPhone, otp, user.full_name).catch(err =>
+    console.error('[FAYDA-OTP SMS] Gateway error:', err.message)
+  );
 
   console.log(`[FAYDA-OTP] FIN: ${fayda_fin} → OTP: ${otp} → Phone: ${rawPhone}`);
 
@@ -725,8 +723,13 @@ app.post('/api/auth/forgot-password/request-otp', (req, res) => {
     );
   } catch (e) {}
 
-  // Mask phone number for security
+  // Send via real SMS Gateway (AfricasTalking / Ethio Telecom)
   const rawPhone = user.phone || '+251-91-123-4567';
+  sendOtp(rawPhone, otp, user.full_name).catch(err =>
+    console.error('[FORGOT-PW SMS] Gateway error:', err.message)
+  );
+
+  // Mask phone number for security
   const maskedPhone = rawPhone.length > 8 
     ? rawPhone.slice(0, 7) + ' ••• ' + rawPhone.slice(-4)
     : rawPhone;
@@ -3664,6 +3667,56 @@ app.get('/api/admin/alerts', (req, res) => {
 // =============================================================
 // NATIONAL CYBER DEFENSE & THREAT SENTINEL GOVERNANCE API
 // =============================================================
+
+// =============================================================
+// SMS GATEWAY ADMIN API
+// =============================================================
+
+// GET /api/admin/sms/logs — recent SMS delivery history
+app.get('/api/admin/sms/logs', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const type  = req.query.type || null;
+
+    // Try DB first
+    let rows = [];
+    try {
+      let sql = 'SELECT * FROM sms_logs ORDER BY created_at DESC LIMIT ?';
+      const params = [limit];
+      if (type) {
+        sql = 'SELECT * FROM sms_logs WHERE type = ? ORDER BY created_at DESC LIMIT ?';
+        params.unshift(type);
+      }
+      rows = db.prepare(sql).all(...params);
+    } catch (_) {
+      // Fall back to in-memory log
+      rows = getSmsLogs().slice(0, limit);
+      if (type) rows = rows.filter(r => r.type === type);
+    }
+
+    const total   = rows.length;
+    const sent    = rows.filter(r => r.status === 'Success' || r.status === 'SIMULATED').length;
+    const failed  = rows.filter(r => r.status === 'FAILED').length;
+    const simulated = rows.filter(r => r.simulated || r.status === 'SIMULATED').length;
+
+    res.json({
+      summary: { total, sent, failed, simulated, real: sent - simulated },
+      mode: (process.env.AT_USERNAME && process.env.AT_API_KEY) ? 'REAL_GATEWAY' : 'SIMULATION',
+      logs: rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/sms/test — send a test SMS (admin only)
+app.post('/api/admin/sms/test', async (req, res) => {
+  const { phone, message } = req.body;
+  if (!phone) return res.status(400).json({ error: 'phone is required' });
+  const { sendSms } = require('./sms');
+  const result = await sendSms(phone, message || 'NPDMS-MOH: Test SMS from National Patient Data Management System. System operational. ✓', { type: 'GENERAL' });
+  res.json(result);
+});
 
 // GET /api/admin/security/overview — Complete cyber defense situational report
 app.get('/api/admin/security/overview', (req, res) => {

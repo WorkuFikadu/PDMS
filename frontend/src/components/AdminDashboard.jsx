@@ -9,7 +9,8 @@ import {
   Eye, ChevronDown, ChevronRight, Download, Search,
   UserCheck, UserX, Stethoscope, Lock, Unlock, Globe,
   AlertOctagon, Terminal, HardDrive, Cpu, Package,
-  Bell, KeyRound, FileDown, Droplets, MapPin, Hash, Check
+  Bell, KeyRound, FileDown, Droplets, MapPin, Hash, Check,
+  Smartphone, Send, MessageSquare
 } from 'lucide-react';
 import { apiFetch, PRODUCTION_BACKEND_URL } from '../api';
 
@@ -122,6 +123,7 @@ const TABS = [
   { id: 'overview',   label: 'Overview',         icon: BarChart3 },
   { id: 'alerts',     label: 'System Alerts',    icon: Bell },
   { id: 'security',   label: '🛡️ Cyber Defense', icon: ShieldAlert },
+  { id: 'sms',        label: '📱 SMS Gateway',   icon: Smartphone },
   { id: 'facilities', label: 'Facilities',        icon: Building2 },
   { id: 'users',      label: 'Staff & Users',     icon: Users },
   { id: 'activity',   label: 'Activity Monitor',  icon: Eye },
@@ -168,6 +170,13 @@ export default function AdminDashboard({ currentUser, t }) {
   const [securityOverview, setSecurityOverview] = useState(null);
   const [securityThreats, setSecurityThreats] = useState([]);
   const [simulating, setSimulating] = useState(false);
+
+  // SMS Gateway State
+  const [smsData, setSmsData] = useState(null);
+  const [smsTypeFilter, setSmsTypeFilter] = useState('');
+  const [testPhone, setTestPhone] = useState('+251911234567');
+  const [testMessage, setTestMessage] = useState('NPDMS Security Notification: System broadcast via Ethio Telecom/AfricasTalking Gateway.');
+  const [sendingSms, setSendingSms] = useState(false);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
 
@@ -243,6 +252,38 @@ export default function AdminDashboard({ currentUser, t }) {
     } catch (e) { console.error(e); }
   }, []);
 
+  const fetchSmsLogs = useCallback(async () => {
+    try {
+      const url = smsTypeFilter ? `/api/admin/sms/logs?type=${smsTypeFilter}&limit=50` : '/api/admin/sms/logs?limit=50';
+      const res = await apiFetch(url);
+      const data = await res.json();
+      setSmsData(data);
+    } catch (e) { console.error(e); }
+  }, [smsTypeFilter]);
+
+  const handleSendTestSms = async (e) => {
+    e.preventDefault();
+    if (!testPhone.trim()) return;
+    setSendingSms(true);
+    try {
+      const res = await apiFetch('/api/admin/sms/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: testPhone, message: testMessage })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`📱 SMS dispatched to ${testPhone} (Status: ${data.status})`);
+        fetchSmsLogs();
+      } else {
+        showToast(`❌ SMS delivery failed: ${data.error || 'Check gateway configuration'}`);
+      }
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`);
+    }
+    setSendingSms(false);
+  };
+
   const simulateAttack = async (attackType) => {
     setSimulating(true);
     try {
@@ -281,10 +322,12 @@ export default function AdminDashboard({ currentUser, t }) {
     fetchRecentLogins();
     fetchSecurityOverview();
     fetchSecurityThreats();
+    fetchSmsLogs();
   };
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { fetchAudit(); }, [fetchAudit]);
+  useEffect(() => { if (activeTab === 'sms') fetchSmsLogs(); }, [fetchSmsLogs, activeTab]);
 
   // ── Toggle user active ────────────────────────────────────────
   const toggleUser = async (user) => {
@@ -1416,6 +1459,244 @@ export default function AdminDashboard({ currentUser, t }) {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          TAB: SMS GATEWAY & TELECOM NOTIFICATIONS
+      ══════════════════════════════════════════════════════════ */}
+      {activeTab === 'sms' && (
+        <div className="space-y-5">
+          {/* Gateway Status Header */}
+          <div className="rounded-2xl border-2 border-sky-300 bg-gradient-to-r from-sky-50 via-indigo-50 to-emerald-50 p-5 shadow-xs">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-sky-600 text-white flex items-center justify-center text-2xl shadow-md">
+                  <Smartphone className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-black text-slate-900">National SMS & Telecom Gateway</h2>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-black ${
+                      smsData?.mode === 'REAL_GATEWAY' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
+                      {smsData?.mode === 'REAL_GATEWAY' ? '🟢 LIVE AFRICASTALKING / ETHIO TELECOM' : '🟡 SECURE SIMULATION MODE (ACTIVE)'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Delivers cryptographic Fayda OTPs, two-factor authorization codes, critical emergency lab alerts, and patient reminders across all 12 Ethiopian administrative regions.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={fetchSmsLogs}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white text-slate-700 hover:text-sky-600 rounded-xl border border-slate-200 shadow-xs hover:border-sky-300 transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Refresh Telemetry
+              </button>
+            </div>
+          </div>
+
+          {/* Telemetry Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <KpiCard
+              icon={Smartphone}
+              label="Total Dispatched"
+              value={smsData?.summary?.total ?? 0}
+              sub="Historical logs"
+              color="text-sky-600"
+            />
+            <KpiCard
+              icon={CheckCircle2}
+              label="Delivered / Success"
+              value={smsData?.summary?.sent ?? 0}
+              sub="100% SLA target"
+              color="text-emerald-600"
+            />
+            <KpiCard
+              icon={Activity}
+              label="Simulated / Dev Logs"
+              value={smsData?.summary?.simulated ?? 0}
+              sub="Zero-cost sandbox"
+              color="text-indigo-600"
+            />
+            <KpiCard
+              icon={AlertTriangle}
+              label="Failed Transmissions"
+              value={smsData?.summary?.failed ?? 0}
+              sub="Network retries"
+              color="text-amber-600"
+            />
+          </div>
+
+          {/* Dispatch Sandbox + Quick Templates */}
+          <Section title="📤 National Telecom Dispatch Sandbox (Test & Emergency Broadcast)" icon={Send}>
+            <form onSubmit={handleSendTestSms} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Destination Mobile (+251 Ethio Telecom / Safaricom)
+                  </label>
+                  <input
+                    type="text"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    placeholder="+251911234567"
+                    className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                    required
+                  />
+                  <div className="mt-1 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTestPhone('+251911234567')}
+                      className="text-[10px] text-sky-600 hover:underline cursor-pointer"
+                    >
+                      JMC Clinician (+251911...)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTestPhone('+251922334455')}
+                      className="text-[10px] text-sky-600 hover:underline cursor-pointer"
+                    >
+                      Admin Officer (+251922...)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      SMS Message Content
+                    </label>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {testMessage.length}/160 chars ({Math.ceil(testMessage.length / 160) || 1} SMS segment)
+                    </span>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={testMessage}
+                    onChange={(e) => setTestMessage(e.target.value)}
+                    placeholder="Enter message text..."
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Template quick-fills */}
+              <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
+                <span className="text-[11px] font-bold text-slate-500">Quick Templates:</span>
+                {[
+                  { label: '🔑 Fayda OTP', msg: `NPDMS-MOH: Your Fayda OTP access code is ${Math.floor(100000 + Math.random() * 900000)}. Valid 10 mins. Do not share.` },
+                  { label: '🚨 Cyber Threat Alert', msg: `🚨 NPDMS DEFENSE: High severity threat blocked from IP 197.156.104.12. Governance review required.` },
+                  { label: '🏥 Referral Transfer', msg: `NPDMS Referral: Patient transferred from Jimma Medical Center to Tikur Anbessa Hospital. Bed reserved.` },
+                  { label: '🩸 Blood Bank Alert', msg: `NPDMS Urgent: O-Negative blood reserves critically low at Hawassa Comp. Hospital. Donors needed.` }
+                ].map((tpl, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setTestMessage(tpl.msg)}
+                    className="text-[10px] px-2.5 py-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 font-medium transition cursor-pointer"
+                  >
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={sendingSms}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {sendingSms ? 'Dispatched to Ethio Telecom Gateway...' : 'Send Live SMS via Gateway'}
+                </button>
+              </div>
+            </form>
+          </Section>
+
+          {/* SMS Transmission Audit Table */}
+          <Section
+            title="📜 Outbound SMS Transmission Ledger"
+            icon={MessageSquare}
+            action={
+              <div className="flex items-center gap-2">
+                <select
+                  value={smsTypeFilter}
+                  onChange={(e) => setSmsTypeFilter(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 bg-white outline-none cursor-pointer"
+                >
+                  <option value="">All Message Types</option>
+                  <option value="OTP">OTP Verification</option>
+                  <option value="SECURITY_ALERT">Security Alerts</option>
+                  <option value="GENERAL">General Notifications</option>
+                </select>
+              </div>
+            }
+          >
+            {(!smsData || !smsData.logs || smsData.logs.length === 0) ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No outbound SMS recorded in this session. Use the sandbox above to trigger a live dispatch.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold text-[11px]">
+                      <th className="px-3 py-2.5">Recipient</th>
+                      <th className="px-3 py-2.5">Category</th>
+                      <th className="px-3 py-2.5">Message Content</th>
+                      <th className="px-3 py-2.5">Status</th>
+                      <th className="px-3 py-2.5">Gateway / Cost</th>
+                      <th className="px-3 py-2.5 text-right">Dispatched</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {smsData.logs.map((log, idx) => (
+                      <tr key={log.id || idx} className="hover:bg-slate-50/80 transition">
+                        <td className="px-3 py-2 font-mono font-bold text-slate-800 text-[11px]">
+                          {log.to_phone || log.to}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            log.type === 'OTP' ? 'bg-sky-100 text-sky-700' :
+                            log.type === 'SECURITY_ALERT' ? 'bg-red-100 text-red-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            {log.type}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 max-w-[280px] truncate text-slate-600 font-sans" title={log.message}>
+                          {log.message}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            log.status === 'Success' ? 'bg-emerald-100 text-emerald-800' :
+                            log.status === 'SIMULATED' ? 'bg-indigo-100 text-indigo-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              log.status === 'Success' ? 'bg-emerald-500' :
+                              log.status === 'SIMULATED' ? 'bg-indigo-500' :
+                              'bg-red-500'
+                            }`} />
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-[10px] text-slate-500">
+                          {log.cost ? `${log.cost}` : log.message_id ? `${log.message_id.slice(0, 10)}...` : 'Ethio-Tel Gateway'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-[11px] text-slate-500">
+                          {ago(log.created_at || log.timestamp)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Section>
         </div>
       )}
 
