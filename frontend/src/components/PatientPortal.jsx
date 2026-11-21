@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   FileText, Activity, Pill, FlaskConical, Calendar, ShieldCheck,
-  Building2, User, Download, Heart
+  Building2, User, Download, Heart, QrCode, Printer, Shield
 } from 'lucide-react';
+import DigitalHealthCardModal from './DigitalHealthCardModal';
 
 export default function PatientPortal({
   currentUser, t
@@ -11,6 +12,7 @@ export default function PatientPortal({
   const [patientData, setPatientData] = useState(null);
   const [encounters, setEncounters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCardModal, setShowCardModal] = useState(false);
 
   // Default patient Kemal Mohammed
   const targetPatientId = 'PAT-001';
@@ -57,12 +59,21 @@ export default function PatientPortal({
             )}
           </div>
 
-          <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/20 text-xs space-y-1">
-            <div>NPDMS ID: <span className="font-mono font-bold text-sky-200">{patientData.npdms_id}</span></div>
-            <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Fayda FIN: {patientData.fayda_fin}</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/20 text-xs space-y-1">
+              <div>NPDMS ID: <span className="font-mono font-bold text-sky-200">{patientData.npdms_id}</span></div>
+              <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Fayda FIN: {patientData.fayda_fin}</span>
+              </div>
             </div>
+            <button
+              onClick={() => setShowCardModal(true)}
+              className="px-3.5 py-2.5 bg-white text-slate-900 hover:bg-sky-50 font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4 text-sky-600" />
+              <span>Digital Health Card</span>
+            </button>
           </div>
         </div>
 
@@ -161,6 +172,14 @@ export default function PatientPortal({
           ))}
         </div>
       </div>
+
+      {/* Digital Health Card Modal with QR Code */}
+      {showCardModal && (
+        <DigitalHealthCardModal
+          patient={patientData}
+          onClose={() => setShowCardModal(false)}
+        />
+      )}
     </div>
   );
 }
