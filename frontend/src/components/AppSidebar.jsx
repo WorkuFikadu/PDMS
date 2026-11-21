@@ -3,12 +3,14 @@ import React from 'react';
 import {
   Users, KeyRound, Sparkles, Activity, Hospital, Bed,
   Share2, Calendar, Baby, Pill, FlaskConical, ShieldAlert,
-  Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network, Droplets, Settings
+  Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network, Droplets, Settings, UserCheck
 } from 'lucide-react';
+import { hasPermission } from '../App';
 
 export default function AppSidebar({
   activeTab, setActiveTab,
   sidebarOpen, t,
+  currentUser,
   isOfflineMode, setIsOfflineMode,
   offlineQueue, onOpenOfflineModal
 }) {
@@ -53,6 +55,12 @@ export default function AppSidebar({
     }
   ];
 
+  // Filter navigation items by authenticated practitioner role (RBAC)
+  const filteredSections = sections.map(sec => ({
+    ...sec,
+    items: sec.items.filter(item => hasPermission(currentUser?.role, item.id))
+  })).filter(sec => sec.items.length > 0);
+
   return (
     <aside
       className={`bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 z-20 ${
@@ -61,7 +69,7 @@ export default function AppSidebar({
     >
       {/* Navigation Groups */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-4 no-scrollbar">
-        {sections.map((sec, sIdx) => (
+        {filteredSections.map((sec, sIdx) => (
           <div key={sIdx} className="space-y-1">
             {sidebarOpen && (
               <h4 className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -147,6 +155,15 @@ export default function AppSidebar({
                 <Plus className="w-3 h-3" />
                 <span>Capture Offline Visit</span>
               </button>
+            )}
+
+            {currentUser && (
+              <div className="flex items-center justify-between text-[10px] text-slate-400 bg-slate-800/60 rounded-lg px-2 py-1">
+                <span className="truncate max-w-[100px] font-medium">{currentUser.full_name?.split(' ')[0]}</span>
+                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-sky-950 text-sky-400 border border-sky-800">
+                  {currentUser.role?.replace(/_/g, ' ')}
+                </span>
+              </div>
             )}
 
             <p className="text-[9px] text-slate-400 text-center pt-1 border-t border-slate-800/80">

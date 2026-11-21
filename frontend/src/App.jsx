@@ -1,5 +1,6 @@
 // frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 import AppNavbar from './components/AppNavbar';
 import AppSidebar from './components/AppSidebar';
 import PatientRegistry from './components/PatientRegistry';
@@ -23,7 +24,26 @@ import EmergencyBloodBank from './components/EmergencyBloodBank';
 import LoginPage from './components/LoginPage';
 import { apiFetch } from './api';
 import { translations } from './i18n';
-import { CheckCircle2, Stethoscope, X } from 'lucide-react';
+import { CheckCircle2, Stethoscope, X, ShieldAlert, Lock } from 'lucide-react';
+
+// Strict Role-Based Access Control (RBAC) Permissions Map
+export const ROLE_PERMISSIONS = {
+  SYSTEM_ADMIN: ['*'],
+  FACILITY_ADMIN: ['patients', 'cross-hospital', 'timeline', 'admissions', 'referrals', 'appointments', 'pharmacy', 'diagnostics', 'blood-bank', 'duplicates', 'audit', 'analytics', 'hospital-network', 'admin'],
+  DOCTOR: ['patients', 'cross-hospital', 'ai-hub', 'timeline', 'surgeries', 'admissions', 'referrals', 'appointments', 'maternal-child', 'pharmacy', 'diagnostics', 'blood-bank', 'patient-portal'],
+  NURSE: ['patients', 'cross-hospital', 'timeline', 'admissions', 'appointments', 'maternal-child', 'diagnostics', 'blood-bank'],
+  PHARMACIST: ['patients', 'timeline', 'pharmacy', 'appointments'],
+  LAB_TECH: ['patients', 'timeline', 'diagnostics', 'blood-bank'],
+  REGISTRATION_OFFICER: ['patients', 'appointments', 'duplicates'],
+  PATIENT: ['patient-portal', 'timeline', 'appointments']
+};
+
+export function hasPermission(role, tabId) {
+  if (!role) return true; // Default allow in guest/demo mode
+  const allowed = ROLE_PERMISSIONS[role] || [];
+  if (allowed.includes('*')) return true;
+  return allowed.includes(tabId);
+}
 
 export default function App() {
   const [lang, setLang] = useState('en');
@@ -232,6 +252,8 @@ export default function App() {
 
   return (
     <div className="h-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
+      {/* PWA Install Banner + Offline Indicator */}
+      <PwaInstallPrompt />
       {/* 1. Slim 56px Top Header with Omnisearch & Switchers */}
       <AppNavbar
         sidebarOpen={sidebarOpen}
@@ -273,6 +295,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           sidebarOpen={sidebarOpen}
           t={t}
+          currentUser={currentUser}
           isOfflineMode={isOfflineMode}
           setIsOfflineMode={setIsOfflineMode}
           offlineQueue={offlineQueue}
@@ -284,6 +307,34 @@ export default function App() {
             {loading ? (
               <div className="p-16 text-center text-slate-500 font-medium text-sm">
                 Connecting to Ethiopian National Patient Data Management System...
+              </div>
+            ) : !hasPermission(currentUser?.role, activeTab) ? (
+              <div className="bg-white rounded-2xl border border-rose-200 p-8 text-center max-w-lg mx-auto my-12 shadow-sm space-y-4 animate-in zoom-in-95">
+                <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl font-black">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Module Access Restricted (RBAC Policy)</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Your assigned professional role (<span className="font-bold text-rose-600">{currentUser?.role?.replace(/_/g, ' ')}</span>) is not permitted to access this clinical module under Ethiopian National Health Data Security Regulations.
+                  </p>
+                </div>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-left text-xs font-mono space-y-1 text-slate-600">
+                  <div><strong>Practitioner:</strong> {currentUser?.full_name}</div>
+                  <div><strong>Role:</strong> {currentUser?.role}</div>
+                  <div><strong>Facility:</strong> {currentUser?.facility_name || currentFacility?.name}</div>
+                  <div><strong>Requested Module:</strong> {activeTab}</div>
+                </div>
+                <button
+                  onClick={() => setActiveTab(
+                    currentUser?.role === 'REGISTRATION_OFFICER' ? 'patients' :
+                    currentUser?.role === 'PHARMACIST' ? 'pharmacy' :
+                    currentUser?.role === 'LAB_TECH' ? 'diagnostics' : 'patients'
+                  )}
+                  className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs transition shadow-xs cursor-pointer"
+                >
+                  Return to Authorized Clinical Workspace
+                </button>
               </div>
             ) : (
               <>
