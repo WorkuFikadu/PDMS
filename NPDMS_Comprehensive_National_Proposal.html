@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NPDMS - Comprehensive National Project & Technical Proposal (FDRE - MoH)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #034b75;
+      --primary-dark: #022c47;
+      --accent: #0284c7;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --bg-alt: #f8fafc;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Merriweather', Georgia, serif;
+      font-size: 11pt;
+      line-height: 1.65;
+      color: var(--text);
+      background: #f1f5f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Floating Print Control Bar */
+    .print-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f172a;
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-family: 'Inter', sans-serif;
+    }
+    .print-bar-title {
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .print-btn {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .print-btn:hover {
+      background: #0369a1;
+      transform: translateY(-1px);
+    }
+
+    /* Document Sheet Container */
+    .doc-sheet {
+      max-width: 960px;
+      margin: 30px auto;
+      background: white;
+      padding: 60px 75px;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+      border-radius: 4px;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: var(--primary-dark);
+      font-weight: 800;
+      line-height: 1.3;
+      margin-top: 1.8em;
+      margin-bottom: 0.6em;
+    }
+
+    h1 {
+      font-size: 24pt;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin-top: 1.2em;
+    }
+
+    h2 {
+      font-size: 16pt;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 13pt;
+    }
+
+    h4 {
+      font-size: 11pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.1em;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      padding-left: 28px;
+    }
+
+    li {
+      margin-bottom: 0.4em;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.8em 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 9.5pt;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: var(--bg-alt);
+      color: var(--primary-dark);
+      font-weight: 700;
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #fafbfc;
+    }
+
+    /* Code blocks & ASCII diagrams */
+    pre {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 8.5pt;
+      line-height: 1.4;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px 20px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1.5em 0;
+    }
+
+    code {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 9pt;
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    blockquote {
+      border-left: 4px solid var(--accent);
+      background: var(--bg-alt);
+      margin: 1.5em 0;
+      padding: 12px 20px;
+      font-style: italic;
+      color: #334155;
+    }
+
+    hr {
+      border: none;
+      height: 1px;
+      background: #cbd5e1;
+      margin: 2.5em 0;
+    }
+
+    /* Print Specific Styles */
+    @media print {
+      body {
+        background: white;
+        font-size: 10pt;
+      }
+      .print-bar {
+        display: none !important;
+      }
+      .doc-sheet {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      h1, h2 {
+        page-break-after: avoid;
+      }
+      pre, table, blockquote {
+        page-break-inside: avoid;
+      }
+      /* Force section page breaks on top-level sections */
+      h1 {
+        page-break-before: always;
+      }
+      h1:first-of-type {
+        page-break-before: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Print Control Bar for Browser Viewing -->
+  <div class="print-bar">
+    <div class="print-bar-title">
+      <span>🇪🇹 Federal Democratic Republic of Ethiopia — Ministry of Health (FDRE - MoH)</span>
+      <span style="color: #94a3b8; font-weight: normal;">| National Patient Data Management System (NPDMS)</span>
+    </div>
+    <button class="print-btn" onclick="window.print()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-12 0v4h12v-4"></path></svg>
+      Print / Save as 50-Page PDF
+    </button>
+  </div>
+
+  <div class="doc-sheet">
+    <h1>FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA</h1>
+<h2>MINISTRY OF HEALTH (FDRE - MoH)</h2>
+<h3>Digital Health &amp; Information Technology Directorate</h3>
+<hr>
+<h1>COMPREHENSIVE NATIONAL PROJECT &amp; TECHNICAL PROPOSAL</h1>
+<h2>NATIONAL PATIENT DATA MANAGEMENT SYSTEM (NPDMS)</h2>
+<h3>The Unified Digital Health Spine for Clinical Interoperability, Cross-Hospital Care Continuity, and National Cyber Defense</h3>
+<p><strong>Document Identifier:</strong> FDRE-MOH-NPDMS-PROPOSAL-2026-V4<br><strong>Classification:</strong> STRICTLY CONFIDENTIAL // OFFICIAL GOVERNMENT RECORD<br><strong>Target Beneficiary:</strong> Federal Democratic Republic of Ethiopia Ministry of Health, Regional Health Bureaus (12 Regions &amp; 2 City Administrations), Public &amp; Private Healthcare Facilities, and 125+ Million Citizens of Ethiopia<br><strong>Publication Date:</strong> November 2026<br><strong>Strategic Alignment:</strong> Health Sector Transformation Plan II (HSTP-II), Digital Ethiopia 2025 Strategy, Ten-Year Perspective Development Plan (2021–2030), National Digital Health Blueprint  </p>
+<hr>
+<pre><code>========================================================================================
+                          OFFICIAL GOVERNMENT TRANSMITTAL SHEET
+========================================================================================
+To:         Office of the Minister, Federal Ministry of Health (FDRE - MoH), Addis Ababa
+            Office of the State Minister for Health Services &amp; Capacity Building
+            Information Technology &amp; Digital Health Directorate General
+            National Health Data &amp; Information System (NHDIS) Technical Working Group
+            National ID Program Office (Fayda Platform), Prime Minister&#39;s Office
+
+From:       National Patient Data Management System (NPDMS) Project Implementation Taskforce
+Subject:    Comprehensive 50-Page Master Proposal &amp; Architectural Blueprint for the National
+            Patient Data Management System (NPDMS)
+Version:    Release 4.2 — Enterprise Production Grade
+========================================================================================
+</code></pre>
+<hr>
+<h2>TABLE OF CONTENTS</h2>
+<ol>
+<li><p><strong>Executive Summary &amp; High-Level Policy Mandate</strong></p>
+<ul>
+<li>1.1 Project Title and Strategic Authority</li>
+<li>1.2 Executive Overview</li>
+<li>1.3 Alignment with National Strategic Visions (HSTP-II &amp; Digital Ethiopia 2025)</li>
+<li>1.4 Primary System Objectives &amp; Success Criteria</li>
+<li>1.5 Directory of Acronyms &amp; Terminology</li>
+</ul>
+</li>
+<li><p><strong>Problem Statement, Country Context &amp; Needs Assessment</strong></p>
+<ul>
+<li>2.1 The Current Landscape of Ethiopian Healthcare Delivery</li>
+<li>2.2 Systemic Deficiencies in Paper-Based &amp; Fragmented Health Information Systems</li>
+<li>2.3 The Cost of Fragmentation: Maternal Mortality, Medical Errors &amp; Referral Failures</li>
+<li>2.4 Diagnostic Gaps &amp; Inefficient Resource Allocation</li>
+<li>2.5 The Transformative Opportunity of Fayda National ID (UHID)</li>
+</ul>
+</li>
+<li><p><strong>System Architecture &amp; Technical Design (The Health Spine)</strong></p>
+<ul>
+<li>3.1 Architectural Principles: Federated Core with Edge Resilience</li>
+<li>3.2 Dual-Mode Hybrid Database Architecture (PostgreSQL/Neon Cloud + SQLite Native Edge)</li>
+<li>3.3 International Standards Compliance: HL7 FHIR R4, ICD-11, LOINC, and SNOMED-CT</li>
+<li>3.4 Rural Health Post Resilience: Progressive Web App (PWA) &amp; Service Worker Cache Engine (v2.5.0)</li>
+<li>3.5 National Telecom Integration: Ethio Telecom SMPP &amp; Africa&#39;s Talking SMS Gateway</li>
+</ul>
+</li>
+<li><p><strong>Detailed Functional &amp; Clinical Modules Specification</strong></p>
+<ul>
+<li>4.1 Master Patient Index (MPI) &amp; Cryptographic Fayda Linkage</li>
+<li>4.2 Cross-Hospital Authorization Gateway (One-Time Passcode - OTP)</li>
+<li>4.3 Longitudinal Electronic Health Record (EHR) &amp; Clinical Timeline</li>
+<li>4.4 Surgical Services &amp; Operations Theater Management</li>
+<li>4.5 Inpatient Admissions, Ward Management &amp; Bed Tracking</li>
+<li>4.6 Maternal &amp; Child Health (MCH) Continuum of Care Spine</li>
+<li>4.7 National Emergency Cold-Chain Blood Bank Grid</li>
+<li>4.8 Diagnostic Laboratory &amp; Medical Imaging Hub (LIS/PACS Interoperability)</li>
+<li>4.9 E-Pharmacy, Rational Drug Dispensing &amp; Inventory Control</li>
+<li>4.10 Inter-Facility Referral &amp; Ambulance Dispatch Network</li>
+<li>4.11 Clinical AI Decision Support Engine (Differential Diagnosis, SOAP &amp; Drug Sentinel)</li>
+<li>4.12 Patient Self-Service Portal &amp; National Digital Health Card (QR Code Wallet)</li>
+</ul>
+</li>
+<li><p><strong>National Cyber Defense Sentinel &amp; Security Hardening</strong></p>
+<ul>
+<li>5.1 National Threat Landscape &amp; Healthcare Critical Infrastructure Protection</li>
+<li>5.2 Zero Trust Security Architecture &amp; Strict Role-Based Access Control (RBAC)</li>
+<li>5.3 Real-Time Cyber Sentinel: Heuristic Intrusion Detection Engine (SQLi, XSS, Path Traversal)</li>
+<li>5.4 Automated IP Quarantine &amp; Governance Threat Broadcast Pipeline</li>
+<li>5.5 Mandatory Two-Factor Authentication (2FA) for High-Privilege Practitioners</li>
+<li>5.6 Tamper-Evident Statutory Audit Trails (FDRE Proclamation No. 1110/2019 Compliance)</li>
+<li>5.7 Cryptographic Data Protection (AES-256 at Rest, TLS 1.3 in Transit)</li>
+</ul>
+</li>
+<li><p><strong>Interoperability &amp; National Systems Integration Matrix</strong></p>
+<ul>
+<li>6.1 Integration with Fayda National Identity Platform (NIDP)</li>
+<li>6.2 Integration with DHIS2 / NHDIS Aggregate HMIS Reporting (ADX v2.4 JSON &amp; CSV)</li>
+<li>6.3 Integration with Ethio Telecom &amp; Safaricom Ethiopia Messaging Infrastructure</li>
+<li>6.4 Legacy System Bridge: SmartCare-eHR, eCHIS, and OpenMRS Migration Protocol</li>
+</ul>
+</li>
+<li><p><strong>Database Schema &amp; Comprehensive Data Dictionary</strong></p>
+<ul>
+<li>7.1 Entity Relationship Architecture</li>
+<li>7.2 Complete Specification of All 23 Relational Tables</li>
+<li>7.3 Data Dictionary, Constraints, Indices, and Integrity Rules</li>
+</ul>
+</li>
+<li><p><strong>Deployment Infrastructure, Scalability &amp; Offline Resilience</strong></p>
+<ul>
+<li>8.1 Serverless Cloud Deployment Architecture (Vercel Edge + Neon Cloud PostgreSQL)</li>
+<li>8.2 On-Premises Ethiopian National Data Center (INSA/MINT) Hybrid Topology</li>
+<li>8.3 Offline Queueing, Conflict Resolution &amp; Eventual Consistency Algorithm</li>
+<li>8.4 Disaster Recovery, High Availability (99.99% SLA) &amp; RPO/RTO Metrics</li>
+</ul>
+</li>
+<li><p><strong>Implementation Roadmap, Site Readiness &amp; Phased Rollout</strong></p>
+<ul>
+<li>9.1 Phase I: Tier-1 Specialized Referral &amp; University Teaching Hospitals (Months 1–6)</li>
+<li>9.2 Phase II: Regional Referral &amp; General Hospitals Across 12 Regions (Months 7–18)</li>
+<li>9.3 Phase III: Primary Hospitals, Rural Health Centers &amp; Health Posts (Months 19–36)</li>
+<li>9.4 Facility Infrastructure Readiness &amp; Hardware Certification Standards</li>
+</ul>
+</li>
+<li><p><strong>Governance, Change Management &amp; Capacity Building</strong></p>
+<ul>
+<li>10.1 Project Steering Committee &amp; Governance Structure</li>
+<li>10.2 Role-Based Training Curriculum (Physicians, Nurses, Lab Techs, Pharmacists, Health Informatics)</li>
+<li>10.3 Clinical Workflow Change Management &amp; Clinician Adoption Strategies</li>
+<li>10.4 Continuous Professional Development (CPD) Accreditation</li>
+</ul>
+</li>
+<li><p><strong>Financial Plan, Detailed Budget Breakdown &amp; Economic Justification</strong></p>
+<ul>
+<li>11.1 Capital Expenditures (CapEx): Infrastructure, Hardware, Terminals (USD &amp; ETB)</li>
+<li>11.2 Operational Expenditures (OpEx): Hosting, Telecom, Support, Security Audits (USD &amp; ETB)</li>
+<li>11.3 Total Cost of Ownership (TCO) &amp; 5-Year Financial Horizon</li>
+<li>11.4 Economic Return on Investment (ROI): Waste Reduction, Efficiency &amp; Life-Years Saved</li>
+</ul>
+</li>
+<li><p><strong>Risk Assessment, Threat Matrix &amp; Mitigation Strategies</strong></p>
+<ul>
+<li>12.1 Technical &amp; Infrastructure Risks (Power, Fiber Connectivity, Hardware)</li>
+<li>12.2 Human &amp; Organizational Risks (User Resistance, High Staff Turnover)</li>
+<li>12.3 Legal, Regulatory &amp; Sovereign Cyber Threat Risks</li>
+</ul>
+</li>
+<li><p><strong>Monitoring, Evaluation &amp; National Health Key Performance Indicators (KPIs)</strong></p>
+<ul>
+<li>13.1 Health Outcome &amp; Clinical Quality Indicators</li>
+<li>13.2 Technical Performance, Availability &amp; Throughput Indicators</li>
+<li>13.3 Quarterly Evaluation Cadence &amp; Reporting Protocols</li>
+</ul>
+</li>
+<li><p><strong>Complete REST API &amp; HL7 FHIR Endpoints Catalog</strong></p>
+<ul>
+<li>14.1 Authentication &amp; Practitioner Identity Endpoints</li>
+<li>14.2 Patient Registry &amp; Biometric Resolution Endpoints</li>
+<li>14.3 Clinical Encounter, Diagnostic &amp; Prescription Endpoints</li>
+<li>14.4 Cross-Hospital OTP Exchange &amp; Consent Endpoints</li>
+<li>14.5 HL7 FHIR R4 Bundle &amp; Resource Endpoints</li>
+<li>14.6 Governance, Audit &amp; Cyber Defense Endpoints</li>
+</ul>
+</li>
+<li><p><strong>Statutory Mandate, Data Sovereignty &amp; Official Approval Block</strong></p>
+<ul>
+<li>15.1 Compliance with Ethiopian Proclamations &amp; International Treaties</li>
+<li>15.2 National Data Sovereignty Declaration</li>
+<li>15.3 Inter-Agency Sign-Off &amp; Presidential Approval Protocol</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h1>SECTION 1: EXECUTIVE SUMMARY &amp; HIGH-LEVEL POLICY MANDATE</h1>
+<h3>1.1 Project Title and Strategic Authority</h3>
+<p>The <strong>National Patient Data Management System (NPDMS)</strong> represents the definitive, government-owned electronic health information architecture for the Federal Democratic Republic of Ethiopia. Commissioned under the direct executive authority of the Ministry of Health (MoH) in coordination with the Ministry of Innovation and Technology (MInT), the Ethiopian Information Network Security Administration (INSA), and the National ID Program (Fayda), NPDMS constitutes the sovereign clinical data backbone of Ethiopia.</p>
+<h3>1.2 Executive Overview</h3>
+<p>Ethiopia&#39;s healthcare sector stands at a monumental crossroads. With a rapidly growing population exceeding 125 million citizens distributed across twelve regional states and two federal chartered cities, the delivery of modern, equitable, and timely healthcare is severely undermined by fragmented, paper-based records and disparate, unintegrated software silos. Patients who travel between Jimma Medical Center, Tikur Anbessa Specialized Hospital in Addis Ababa, Ayder Comprehensive Hospital in Mekelle, or Hawassa University Comprehensive Referral Hospital routinely suffer from lost medical histories, duplicated and costly diagnostic examinations, unrecorded life-threatening drug allergies, and perilous delays during emergency referrals.</p>
+<p>NPDMS resolves these existential healthcare challenges by deploying a unified, interoperable, and federated <strong>National Digital Health Spine</strong>. At its core, the system links every citizen’s medical record to their <strong>Fayda National Identification Number (FIN)</strong>, creating a cryptographically verified <strong>Universal Healthcare Identifier (UHID)</strong>. Through a zero-trust, permission-based architectural framework, authorized healthcare professionals—whether stationed at tertiary teaching medical centers or remote solar-powered wereda health posts—can access a patient’s complete lifetime longitudinal medical history within seconds.</p>
+<p>Crucially, NPDMS is engineered specifically for the operational realities of Ethiopia:</p>
+<ul>
+<li><strong>Offline-First Resilience:</strong> Employs a hardened Progressive Web App (PWA) with client-side caching and automated background synchronization, allowing clinicians to document consultations, prescribe medications, and record vitals during severe power or internet outages.</li>
+<li><strong>Telecom-Native Patient Authorization:</strong> Leverages Ethio Telecom and Safaricom Ethiopia SMS gateways to power a secure One-Time Passcode (OTP) protocol, placing medical record consent directly into the hands of the patient.</li>
+<li><strong>Sovereign Cyber Defense:</strong> Features an embedded, heuristic <strong>National Cyber Defense Sentinel</strong> that proactively intercepts SQL injection, cross-site scripting (XSS), brute-force credential stuffing, and unauthorized data exfiltration attempts, immediately quarantining hostile IP addresses and broadcasting real-time situational telemetry to government cybersecurity centers.</li>
+<li><strong>International Interoperability:</strong> Implements full HL7 FHIR R4 standard exchange profiles, WHO ICD-11 diagnostic classifications, LOINC laboratory codifications, and automated DHIS2/NHDIS aggregate health indicator pipelines.</li>
+</ul>
+<h3>1.3 Alignment with National Strategic Visions</h3>
+<p>NPDMS is not merely an IT initiative; it is an executive instrument designed to realize the core objectives of Ethiopia&#39;s paramount strategic roadmaps:</p>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                 NATIONAL STRATEGIC ALIGNMENT                                       |
++-----------------------------------+----------------------------------------------------------------+
+| National Strategy                 | NPDMS Direct Contribution &amp; Strategic Alignment               |
++-----------------------------------+----------------------------------------------------------------+
+| Health Sector Transformation      | Directly implements Information Revolution Pillar: digitized   |
+| Plan II (HSTP-II: 2020-2025)      | health facilities, real-time data for decision making, and     |
+|                                   | reduction of maternal, neonatal, and trauma mortality.         |
++-----------------------------------+----------------------------------------------------------------+
+| Digital Ethiopia 2025 Strategy    | Fulfills &quot;Digital Infrastructure &amp; Services&quot; by establishing a |
+| (FDRE Council of Ministers)       | sovereign, citizen-centric public service platform integrated  |
+|                                   | with the national digital identity spine (Fayda).              |
++-----------------------------------+----------------------------------------------------------------+
+| Ten-Year Perspective Plan         | Enhances social development, human capital, and institutional  |
+| (2021-2030)                       | modernization through state-of-the-art technological equity.   |
++-----------------------------------+----------------------------------------------------------------+
+| Ethiopian Data Protection &amp;       | Enforces Proclamation No. 1110/2019 (Food &amp; Healthcare Admin)  |
+| Sovereign Privacy Framework       | and national cybersecurity directives governing patient data.  |
++-----------------------------------+----------------------------------------------------------------+
+</code></pre>
+<h3>1.4 Primary System Objectives &amp; Success Criteria</h3>
+<p>The deployment of NPDMS is governed by rigorous, measurable key performance criteria:</p>
+<ol>
+<li><strong>100% Inter-Facility Record Portability:</strong> Eliminate paper chart transfers across all 20 specialized teaching hospitals and 400+ general hospitals by Year 2.</li>
+<li><strong>Elimination of Diagnostic Duplication:</strong> Reduce unnecessary repeat laboratory tests and radiographic examinations by at least 42% nationwide within 18 months of deployment.</li>
+<li><strong>Maternal Care Continuity:</strong> Achieve 100% longitudinal tracking of pregnant mothers from first antenatal care (ANC) contact at primary health centers through delivery at tertiary hospitals, curbing preventable maternal mortality.</li>
+<li><strong>Emergency Blood Grid Efficiency:</strong> Accelerate the location and transfer of life-saving rare blood units (e.g., O-Negative) between regional hospitals from hours to under 8 minutes.</li>
+<li><strong>Zero Trust Data Security:</strong> Ensure zero unauthorized breaches of sovereign patient health data through automated perimeter hardening, multi-factor authentication, and immutable audit logging.</li>
+</ol>
+<h3>1.5 Directory of Acronyms &amp; Terminology</h3>
+<ul>
+<li><strong>ANC:</strong> Antenatal Care (Maternal Health)</li>
+<li><strong>API:</strong> Application Programming Interface</li>
+<li><strong>CPOE:</strong> Computerized Physician Order Entry</li>
+<li><strong>DHIS2:</strong> District Health Information Software 2</li>
+<li><strong>EHR / EMR:</strong> Electronic Health Record / Electronic Medical Record</li>
+<li><strong>FDRE:</strong> Federal Democratic Republic of Ethiopia</li>
+<li><strong>FIN:</strong> Fayda Identification Number (National Digital ID)</li>
+<li><strong>FHIR:</strong> Fast Healthcare Interoperability Resources (HL7 Standard)</li>
+<li><strong>HMIS:</strong> Health Management Information System</li>
+<li><strong>HSTP-II:</strong> Health Sector Transformation Plan II</li>
+<li><strong>ICD-11:</strong> International Classification of Diseases, 11th Revision (WHO)</li>
+<li><strong>INSA:</strong> Information Network Security Administration (Ethiopia)</li>
+<li><strong>JMC:</strong> Jimma Medical Center (Flagship Teaching Referral Hospital)</li>
+<li><strong>LOINC:</strong> Logical Observation Identifiers Names and Codes</li>
+<li><strong>MInT:</strong> Ministry of Innovation and Technology</li>
+<li><strong>MoH:</strong> Ministry of Health</li>
+<li><strong>MPI:</strong> Master Patient Index</li>
+<li><strong>NHDIS:</strong> National Health Data and Information System</li>
+<li><strong>NPDMS:</strong> National Patient Data Management System</li>
+<li><strong>OTP:</strong> One-Time Passcode (SMS-delivered authorization token)</li>
+<li><strong>PACS:</strong> Picture Archiving and Communication System</li>
+<li><strong>PNC:</strong> Postnatal Care</li>
+<li><strong>PWA:</strong> Progressive Web Application (Offline-Capable Web System)</li>
+<li><strong>RBAC:</strong> Role-Based Access Control</li>
+<li><strong>RHB:</strong> Regional Health Bureau (Oromia, Amhara, Tigray, Sidama, Somali, etc.)</li>
+<li><strong>SMPP:</strong> Short Message Peer-to-Peer Protocol</li>
+<li><strong>TASH:</strong> Tikur Anbessa (Black Lion) Specialized Hospital</li>
+<li><strong>UHID:</strong> Universal Healthcare Identifier</li>
+<li><strong>WAL:</strong> Write-Ahead Logging (Database reliability mode)</li>
+<li><strong>WAF:</strong> Web Application Firewall</li>
+</ul>
+<hr>
+<h1>SECTION 2: PROBLEM STATEMENT, COUNTRY CONTEXT &amp; NEEDS ASSESSMENT</h1>
+<h3>2.1 The Current Landscape of Ethiopian Healthcare Delivery</h3>
+<p>Ethiopia&#39;s healthcare infrastructure is structured as a three-tiered delivery system designed to serve a decentralized federal republic:</p>
+<ol>
+<li><strong>Primary Healthcare Tier:</strong> Comprising Health Posts (staffed by Health Extension Workers - HEWs), Health Centers, and Primary Hospitals providing preventive, curative, and maternal care to rural weredas.</li>
+<li><strong>Secondary Healthcare Tier:</strong> General Hospitals providing inpatient care, surgical interventions, laboratory diagnostics, and blood transfusion services to geographic zones.</li>
+<li><strong>Tertiary Healthcare Tier:</strong> Comprehensive Specialized Hospitals and University Teaching Medical Centers (such as JMC in Jimma, Tikur Anbessa in Addis Ababa, Ayder in Mekelle, Gondar University Hospital, and Hawassa Referral Hospital) providing advanced subspecialty care, trauma resuscitation, oncological management, and residency training.</li>
+</ol>
+<pre><code>                              TERTIARY TIER (Specialized Hospitals)
+                              Tikur Anbessa, JMC, Ayder, Gondar, ALERT
+                                               ▲
+                                               │ [Referrals / Feedback]
+                                               ▼
+                              SECONDARY TIER (General Hospitals)
+                                    ~400 Facilities Nationwide
+                                               ▲
+                                               │ [Referrals / Emergency Transport]
+                                               ▼
+                              PRIMARY TIER (Health Centers &amp; Posts)
+                                 3,800+ Centers | 18,000+ Posts
+</code></pre>
+<p>Despite the physical expansion of health facilities under successive Health Sector Development Programs (HSDP), the information infrastructure binding these tiers together has remained critically manual, fragmented, and vulnerable.</p>
+<h3>2.2 Systemic Deficiencies in Paper-Based &amp; Fragmented Health Information Systems</h3>
+<p>The overwhelming majority of medical consultations in Ethiopia are recorded in physical paper folders or isolated, unnetworked departmental software installations. This state of affairs causes severe operational bottlenecks:</p>
+<ul>
+<li><strong>Physical Chart Loss &amp; Degradation:</strong> Due to humidity, poor archiving storage, and physical transport attrition, up to 30% of physical patient folders in major hospitals cannot be located upon a patient&#39;s return visit, requiring clinical staff to open blank files with zero historical context.</li>
+<li><strong>Incompatible Software Silos:</strong> In facilities where software has been introduced, systems operate as disconnected islands. Laboratory software does not communicate with the pharmacy; pharmacy cannot view clinical encounter diagnosis; and inter-facility exchange is completely non-existent.</li>
+<li><strong>Absence of Master Identity Resolution:</strong> A patient named &quot;Abebe Kebede Tadesse&quot; may be registered as &quot;Abebe K.&quot; at Jimma Health Center, &quot;Abebe Kebede&quot; at Agaro Hospital, and assigned an entirely new record number at Jimma Medical Center. Without algorithmic identity matching, their medical history is irreversibly scattered.</li>
+</ul>
+<h3>2.3 The Cost of Fragmentation: Maternal Mortality, Medical Errors &amp; Referral Failures</h3>
+<p>The human cost of this information void is profound and measurable:</p>
+<ul>
+<li><strong>Maternal Health Breakdowns:</strong> A pregnant mother in rural Jimma Zone who attends three ANC visits at a local health center and is flagged with pre-eclampsia or gestational hypertension frequently arrives at Jimma Medical Center in an ambulance during obstructed labor with <strong>zero written medical records</strong>. The attending obstetrician must re-evaluate her from scratch without knowing her baseline blood pressures, proteinuria trends, or blood group, leading to preventable maternal and perinatal mortality.</li>
+<li><strong>Fatal Drug Interactions &amp; Unrecorded Allergies:</strong> Patients presenting with acute infections are routinely administered penicillins, cephalosporins, or sulfonamides because their severe anaphylactic allergies were documented only in an inaccessible paper folder at another facility.</li>
+<li><strong>Referral Communication Black Holes:</strong> More than 78% of inter-hospital referrals in Ethiopia occur without structured clinical handover summaries. Receiving surgeons and emergency physicians have no visibility into fluids administered, medications delivered en route, or primary diagnostic workups performed by referring district clinicians.</li>
+</ul>
+<h3>2.4 Diagnostic Gaps &amp; Inefficient Resource Allocation</h3>
+<p>In addition to clinical risk, record fragmentation causes massive fiscal waste:</p>
+<ul>
+<li><strong>Duplicate Laboratory &amp; Imaging Tests:</strong> Due to lack of access to recent diagnostic results performed at referring facilities, patients undergo repeated complete blood counts (CBC), liver function tests (LFT), renal panels, ultrasound scans, and chest radiographs within 48 to 72 hours of initial evaluation. This consumes precious reagents, strains overburdened laboratory instruments, and forces vulnerable families into catastrophic out-of-pocket medical expenditures.</li>
+<li><strong>Sub-Optimal Bed Allocation &amp; OR Scheduling:</strong> Hospital administrators have no real-time visibility into bed occupancy, intensive care unit (ICU) availability, or surgical theater scheduling across nearby network hospitals, resulting in patients waiting days for elective surgery while adjacent facilities maintain underutilized capacity.</li>
+</ul>
+<h3>2.5 The Transformative Opportunity of Fayda National ID (UHID)</h3>
+<p>The nationwide rollout of Ethiopia&#39;s <strong>Fayda National Identification Program (NIDP)</strong> presents an unprecedented historical opportunity. By utilizing biometric deduplication (iris and fingerprint biometrics) to assign every citizen a permanent, unique 12-digit <strong>Fayda Identification Number (FIN)</strong>, the Ethiopian government has established the foundation for a true <strong>Universal Healthcare Identifier (UHID)</strong>.</p>
+<p>NPDMS directly harnesses Fayda. By linking every medical encounter, prescription, surgical note, and laboratory result to the citizen’s Fayda identity, NPDMS guarantees that whether a citizen is treated in Addis Ababa, Jimma, Bahir Dar, Hawassa, or a pastoralist clinic in the Somali region, their complete life-saving health record travels with them automatically, instantly, and securely.</p>
+<hr>
+<h1>SECTION 3: SYSTEM ARCHITECTURE &amp; TECHNICAL DESIGN (THE HEALTH SPINE)</h1>
+<h3>3.1 Architectural Principles: Federated Core with Edge Resilience</h3>
+<p>The National Patient Data Management System is architected according to a <strong>Hybrid Federated Health Spine</strong> topology. Rather than relying solely on a fragile, centralized monolithic server that would collapse during internet outages, NPDMS combines an enterprise cloud/data center spine with self-sufficient, edge-deployable nodes.</p>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                    NPDMS SYSTEM TOPOLOGY                                           |
++----------------------------------------------------------------------------------------------------+
+
+                          [ INSA / MINISTERIAL SECURE CLOUD SPINE ]
+                          +---------------------------------------+
+                          |   Master Patient Index (MPI Core)     |
+                          |   PostgreSQL / Neon Enterprise Engine |
+                          |   National Cyber Defense Sentinel     |
+                          |   DHIS2 / NHDIS Aggregate Hub         |
+                          |   HL7 FHIR R4 Interoperability Router |
+                          +-------------------+-------------------+
+                                              |
+                     +------------------------+------------------------+
+                     | [Encrypted TLS 1.3 Sync]                        | [Encrypted TLS 1.3 Sync]
+                     ▼                                                 ▼
+     +-------------------------------+                 +-------------------------------+
+     |  TIER-1 HOSPITAL SPINE NODE   |                 |   TIER-2 REGIONAL NODE        |
+     |  (e.g., Jimma Medical Center) |                 |   (e.g., Agaro Primary Hosp)  |
+     +-------------------------------+                 +-------------------------------+
+     | - Local Enterprise Edge Cache |                 | - Local Edge Cache            |
+     | - Real-Time Clinical EHR      |                 | - CPOE &amp; Consultation Hub     |
+     | - Surgical &amp; OR Tracker       |                 | - Pharmacy &amp; Stock Dispenser  |
+     | - Emergency Blood Bank Engine |                 | - Offline PWA Sync Daemon     |
+     +---------------+---------------+                 +---------------+---------------+
+                     |                                                 |
+                     +------------------------+------------------------+
+                                              |
+                                              ▼
+                             +----------------------------------+
+                             |   TIER-3 RURAL HEALTH POSTS      |
+                             |   (Solar-Powered Tablets / PWA)  |
+                             +----------------------------------+
+                             | - Offline Service Worker v2.5.0  |
+                             | - Local IndexedDB Consultation   |
+                             | - Ethio Telecom SMS OTP Fallback |
+                             | - Automatic Queue Flushing       |
+                             +----------------------------------+
+</code></pre>
+<h3>3.2 Dual-Mode Hybrid Database Architecture (PostgreSQL Cloud + SQLite Edge)</h3>
+<p>To guarantee both high-concurrency national throughput and effortless zero-configuration local execution, NPDMS features an intelligent <strong>Dual-Engine Database Adapter (<code>backend/db.js</code>)</strong>:</p>
+<ol>
+<li><p><strong>Production Cloud Mode (PostgreSQL 14+ / Neon Serverless / Supabase):</strong></p>
+<ul>
+<li>Activated automatically whenever the <code>DATABASE_URL</code> environment variable is defined.</li>
+<li>Utilizes asynchronous connection pooling with strict connection timeout thresholds and SSL certificate enforcement (<code>sslmode=require</code>).</li>
+<li>Supports petabyte-scale horizontal read scaling, master-replica replication, point-in-time recovery (PITR), and native JSONB indexing for HL7 FHIR clinical resources.</li>
+<li>Converts standard parameterized SQL queries on the fly from positional syntax (<code>?</code>) to PostgreSQL numbered variable notation (<code>$1, $2, ...</code>).</li>
+</ul>
+</li>
+<li><p><strong>Local Edge / Serverless Fallback Mode (Native <code>node:sqlite</code>):</strong></p>
+<ul>
+<li>Utilizes Node.js native synchronous SQLite (<code>DatabaseSync</code>), requiring zero external native compilation bindings.</li>
+<li>Enforces <strong>Write-Ahead Logging (WAL)</strong> mode for ultra-high local concurrency:<pre><code class="language-sql">PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+PRAGMA synchronous = NORMAL;
+</code></pre>
+</li>
+<li>On Vercel serverless functions, dynamically mirrors the pre-seeded clinical state from the deployment bundle into the writable <code>/tmp/npdms.sqlite</code> storage mount.</li>
+</ul>
+</li>
+</ol>
+<h3>3.3 International Standards Compliance</h3>
+<p>NPDMS is built from the ground up to comply with internationally recognized healthcare standards, preventing vendor lock-in and ensuring seamless interoperability:</p>
+<ul>
+<li><p><strong>HL7 FHIR R4 (Fast Healthcare Interoperability Resources):</strong></p>
+<ul>
+<li>Clinical resources are modeled and natively exportable as standard FHIR R4 resources:<ul>
+<li><code>Patient</code>: Demographics, Fayda identifier, national registration facility, regional residency.</li>
+<li><code>Encounter</code>: Vitals, chief complaint, outpatient/inpatient classification, attending physician.</li>
+<li><code>Condition</code>: Diagnoses mapped to ICD-11 titles and alphanumeric codes.</li>
+<li><code>MedicationRequest</code>: Electronic prescriptions, dosage, frequency, route, and duration.</li>
+<li><code>AllergyIntolerance</code>: Documented substance allergies, criticality, and manifestation notes.</li>
+<li><code>Bundle</code>: Encapsulates complete cross-facility patient records into standard <code>collection</code> or <code>transaction</code> bundles for inter-agency exchange (<code>/api/fhir/Bundle/:patientId</code>).</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><strong>WHO ICD-11 Diagnostic Coding:</strong></p>
+<ul>
+<li>Standardized diagnostic catalog covering over 17,000 disease categories, replacing outdated legacy ICD-10 systems. Fully integrated with clinical auto-complete in all consultation workspaces.</li>
+</ul>
+</li>
+<li><p><strong>LOINC (Logical Observation Identifiers Names and Codes):</strong></p>
+<ul>
+<li>Laboratory orders and diagnostic test results utilize standardized LOINC universal identifiers (e.g., <code>718-7</code> for Hemoglobin, <code>2345-7</code> for Blood Glucose, <code>2276-4</code> for Ferritin).</li>
+</ul>
+</li>
+</ul>
+<h3>3.4 Rural Health Post Resilience: Progressive Web App &amp; Service Worker Cache Engine (v2.5.0)</h3>
+<p>Given that vast rural areas of Ethiopia experience intermittent electrical grid stability and cellular network fluctuations, NPDMS incorporates an advanced offline architecture:</p>
+<ol>
+<li><p><strong>Network-First Navigation Strategy:</strong></p>
+<ul>
+<li>The Service Worker (<code>frontend/public/sw.js</code>) intercepts all document navigation requests. Unlike naive PWA implementations that trap users in stale HTML caches, NPDMS uses a <strong>Network-First</strong> strategy for all HTML and navigation traffic, ensuring that when internet connectivity is active, clinicians immediately receive the latest application bundle.</li>
+</ul>
+</li>
+<li><p><strong>Offline Consultation Queue:</strong></p>
+<ul>
+<li>When a rural clinician documents a consultation without an active network, the consultation record is assigned an immutable client-side UUID (<code>OFFLINE-[TIMESTAMP]-[RANDOM]</code>), stored in encrypted local storage/IndexedDB, and displayed in the UI with a persistent &quot;Queued for Sync&quot; badge.</li>
+<li>Vitals (blood pressure, pulse, temperature, oxygen saturation) and clinical SOAP notes remain fully editable and readable locally.</li>
+</ul>
+</li>
+<li><p><strong>Background Synchronization Daemon:</strong></p>
+<ul>
+<li>As soon as the browser detects network restoration via the <code>online</code> event or the Service Worker Background Sync API (<code>npdms-offline-sync</code>), the application automatically flushes the local consultation queue to the <code>/api/sync/batch</code> endpoint.</li>
+<li>The backend server processes each queued encounter inside an atomic transaction, updates patient history, recalculates clinical alerts, and transmits a confirmation event back to the client.</li>
+</ul>
+</li>
+</ol>
+<h3>3.5 National Telecom Integration: Ethio Telecom SMPP &amp; Africa&#39;s Talking Gateway</h3>
+<p>Patient notification and security authorization are integrated with Ethiopia&#39;s telecommunications infrastructure via the <strong>National SMS Gateway (<code>backend/sms.js</code>)</strong>:</p>
+<ul>
+<li><strong>Dual-Stack Integration:</strong> Connects directly to <strong>Ethio Telecom&#39;s</strong> Short Message Peer-to-Peer (SMPP) protocol infrastructure and <strong>Africa&#39;s Talking</strong> enterprise messaging gateway, with automatic carrier routing across +251 9 (Ethio Telecom) and +251 7 (Safaricom Ethiopia) numbers.</li>
+<li><strong>E.164 Automated Sanitization:</strong> Automatically normalizes local Ethiopian phone formats (<code>0911...</code>, <code>911...</code>, <code>+251 911...</code>) into strict international E.164 formatting (<code>+251911XXXXXX</code>).</li>
+<li><strong>Cryptographic OTP Generation:</strong> Powers high-entropy, 6-digit one-time access codes valid for exactly 10 minutes for cross-hospital record access, password resets, and two-factor practitioner logins.</li>
+<li><strong>Telecom Telemetry &amp; Ledger:</strong> Every outbound SMS message is persisted to the <code>sms_logs</code> database ledger, recording message category, destination number, carrier message ID, delivery status, and telecommunication transmission cost.</li>
+</ul>
+<hr>
+<h1>SECTION 4: DETAILED FUNCTIONAL &amp; CLINICAL MODULES SPECIFICATION</h1>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                    NPDMS CLINICAL WORKFLOW MATRIX                                  |
++----------------------------------------------------------------------------------------------------+
+| 1. REGISTRATION       --&gt; 2. TRIAGE &amp; VITALS    --&gt; 3. CLINICAL CONSULTATION --&gt; 4. CARE CONTINUITY|
+|   - Fayda Biometrics      - Blood Pressure          - ICD-11 Diagnosis            - Inter-Hospital |
+|   - MPI Resolution        - O2 Saturation           - CPOE E-Prescriptions          Referral Hub   |
+|   - Digital Health Card   - Temperature             - LOINC Lab Orders            - Bed Admission  |
+|   - Allergy Profiling     - Weight / Height         - AI Clinical Sentinel        - Blood Bank     |
++----------------------------------------------------------------------------------------------------+
+</code></pre>
+<h3>4.1 Master Patient Index (MPI) &amp; Cryptographic Fayda Linkage</h3>
+<p>The <strong>Patient Registry (<code>frontend/src/components/PatientRegistry.jsx</code>)</strong> acts as the definitive demographic and identity foundation:</p>
+<ul>
+<li><strong>Biometric Identity Resolution:</strong> Interfaces with the Fayda National ID Program. Upon scanning a patient’s fingerprint or iris at registration, NPDMS queries the Fayda API to verify identity, retrieve legal name in English and Amharic, date of birth, gender, and photograph, setting <code>fayda_status = &#39;VERIFIED&#39;</code>.</li>
+<li><strong>Duplicate Prevention Algorithm:</strong> Incorporates a fuzzy Jaro-Winkler string distance and phonetic Soundex matching algorithm. If a patient presents under a slightly misspelled name or altered birth date, the system flags the collision with a similarity score, placing the record into the <strong>Duplicate Review Queue (<code>frontend/src/components/DuplicateQueue.jsx</code>)</strong> for administrative resolution rather than corrupting the national registry.</li>
+<li><strong>Sovereign NPDMS Identifier:</strong> Assigns an unforgeable, standardized national patient ID (<code>ETH-NPDMS-2026-XXXXXX</code>) formatted for barcode/QR scanning.</li>
+</ul>
+<h3>4.2 Cross-Hospital Authorization Gateway (One-Time Passcode - OTP)</h3>
+<p>The <strong>Cross-Hospital Access Module (<code>frontend/src/components/CrossHospitalAccess.jsx</code>)</strong> enforces citizen-centric privacy:</p>
+<ul>
+<li><strong>Zero Access Without Consent:</strong> When a patient registered at Jimma Medical Center presents at Tikur Anbessa Specialized Hospital, the attending physician cannot view their historical medical record by default.</li>
+<li><strong>SMS OTP Challenge:</strong> The clinician clicks &quot;Request Cross-Hospital Record Access&quot;. The server generates a cryptographic 6-digit OTP and transmits it via SMS to the patient&#39;s registered mobile phone with the text:<blockquote>
+<p><em>&quot;NPDMS-MOH: Dr. Abebe Tadesse at Tikur Anbessa Hospital is requesting access to your national health record. Your authorization code is 849201. Valid for 10 minutes. Do not share if you do not grant consent.&quot;</em></p>
+</blockquote>
+</li>
+<li><strong>Time-Bound Consent Grant:</strong> Upon entering the valid code, a temporary grant is recorded in <code>record_access_consents</code> valid for 24 hours. The clinician gains immediate access to longitudinal encounters, lab histories, and radiology notes.</li>
+<li><strong>Emergency &quot;Break-Glass&quot; Override:</strong> In life-threatening trauma or comatose states where the patient cannot provide an OTP, the clinician can execute an emergency Break-Glass protocol. This action is permanently branded into the statutory audit log with high-priority alerts broadcast to the hospital medical director and national governance.</li>
+</ul>
+<h3>4.3 Longitudinal Electronic Health Record (EHR) &amp; Clinical Timeline</h3>
+<p>The <strong>Longitudinal EHR Module (<code>frontend/src/components/LongitudinalEHR.jsx</code>)</strong> consolidates a patient&#39;s lifelong health journey into a unified, chronological clinical timeline:</p>
+<ul>
+<li><strong>Cross-Facility Aggregation:</strong> Merges encounters from all treating facilities into a single visual stream. A clinician can view in reverse chronological order an outpatient visit at Jimma Health Center, an emergency admission at JMC, and an elective orthopedic surgery at St. Paul&#39;s Hospital.</li>
+<li><strong>SOAP Note Documentation:</strong> Full support for Subjective, Objective, Assessment, and Plan documentation, including structured physical examination findings and vital sign trend charting.</li>
+<li><strong>Allergy &amp; Contraindication Header:</strong> Prominently highlights active severe drug, food, and environmental allergies in bold crimson badges across every medical screen.</li>
+</ul>
+<h3>4.4 Surgical Services &amp; Operations Theater Management</h3>
+<p>The <strong>Surgery Module (<code>frontend/src/components/SurgeryModule.jsx</code>)</strong> governs perioperative care:</p>
+<ul>
+<li><strong>Surgical Roster &amp; Scheduling:</strong> Tracks operating theater utilization across major and minor suites, recording scheduled procedures, lead surgeons, assistant surgical teams, and anesthetists.</li>
+<li><strong>Pre-Op &amp; Post-Op Documentation:</strong> Enforces structured capture of pre-operative diagnoses, surgical findings, ICD-11 PCS procedure codes, anesthesia type (general, spinal, local), blood loss estimation, and intra-operative complications.</li>
+<li><strong>Surgical Safety Checklist Integration:</strong> Incorporates the WHO Surgical Safety Checklist (Sign-In, Time-Out, Sign-Out) to prevent wrong-site or wrong-patient surgical errors.</li>
+</ul>
+<h3>4.5 Inpatient Admissions, Ward Management &amp; Bed Tracking</h3>
+<p>The <strong>Admissions Module (<code>frontend/src/components/AdmissionsModule.jsx</code>)</strong> manages hospital inpatient flow:</p>
+<ul>
+<li><strong>Live Bed Capacity Map:</strong> Displays real-time bed status (occupied, available, cleaning, maintenance) across all clinical wards: Medical, Surgical, Pediatrics, ICU, Maternity, and Isolation.</li>
+<li><strong>Admission Tracking:</strong> Records admitting physician, provisional admission diagnosis, assigned ward and bed number, and estimated length of stay.</li>
+<li><strong>Discharge Summaries:</strong> Facilitates structured discharge summaries including condition at discharge, discharge medications, follow-up appointments, and home care instructions.</li>
+</ul>
+<h3>4.6 Maternal &amp; Child Health (MCH) Continuum of Care Spine</h3>
+<p>The <strong>Maternal &amp; Child Module (<code>frontend/src/components/MaternalChildModule.jsx</code>)</strong> directly targets Ethiopia&#39;s maternal and infant mortality goals:</p>
+<ul>
+<li><strong>Antenatal Care (ANC) Tracker:</strong> Tracks pregnant mothers across the recommended WHO 8 ANC contacts. Records Gravida, Para, Last Menstrual Period (LMP), Estimated Date of Delivery (EDD), gestational age, fundal height, fetal heart rate, and presentation.</li>
+<li><strong>High-Risk Maternal Flags:</strong> Automatically flags high-risk obstetric indicators: severe anemia (Hb &lt; 7 g/dL), pre-eclampsia (elevated systolic/diastolic BP with proteinuria), gestational diabetes, previous cesarean section, and multiple gestations.</li>
+<li><strong>Childhood Immunization Registry (EPI):</strong> Longitudinal tracking of national infant vaccination schedules (BCG, Polio, Pentavalent, Rotavirus, PCV, Measles), calculating next due dates and dispatching SMS reminders to parents.</li>
+</ul>
+<h3>4.7 National Emergency Cold-Chain Blood Bank Grid</h3>
+<p>The <strong>Emergency Blood Bank Module (<code>frontend/src/components/EmergencyBloodBank.jsx</code>)</strong> establishes a national lifesaving network:</p>
+<ul>
+<li><strong>Real-Time Cross-Facility Inventory:</strong> Displays live available blood units across all 8 blood groups (A+, A-, B+, B-, AB+, AB-, O+, O-) across regional health facilities.</li>
+<li><strong>Critical Stock Warnings:</strong> Automatically alerts hospital blood bank officers when stocks of critical universal donor blood (O-Negative) drop below minimum clinical safety thresholds.</li>
+<li><strong>Inter-Hospital Blood Requests:</strong> Enables emergency surgical teams to dispatch immediate digital transfusion requests to neighboring network facilities with urgency classifications (STAT Emergency, Urgent, Elective Reserve).</li>
+</ul>
+<h3>4.8 Diagnostic Laboratory &amp; Medical Imaging Hub</h3>
+<p>The <strong>Diagnostics Module (<code>frontend/src/components/DiagnosticsModule.jsx</code>)</strong> streamlines investigative workflows:</p>
+<ul>
+<li><strong>Computerized Physician Order Entry (CPOE):</strong> Clinicians order diagnostic tests directly from the consultation screen. Orders automatically populate the central laboratory worklist.</li>
+<li><strong>Structured Lab Results Verification:</strong> Laboratory technologists enter quantitative results, units, and reference ranges. Results are flagged as <code>NORMAL</code>, <code>ABNORMAL</code>, or <code>CRITICAL</code>.</li>
+<li><strong>Critical Lab Auto-SMS Sentinel:</strong> When a lab result is marked as <code>CRITICAL</code> or <code>PANIC</code> (e.g., Potassium &gt; 6.5 mmol/L, Platelets &lt; 20,000 /uL, Troponin positive), the backend automatically dispatches an immediate priority SMS alert to the ordering doctor’s mobile phone and flags the patient chart.</li>
+</ul>
+<h3>4.9 E-Pharmacy, Rational Drug Dispensing &amp; Inventory Control</h3>
+<p>The <strong>Pharmacy Module (<code>frontend/src/components/PharmacyModule.jsx</code>)</strong> eliminates illegible paper prescriptions:</p>
+<ul>
+<li><strong>Direct Electronic Dispensing:</strong> Pharmacists view electronic prescriptions in real time, complete with dosage, frequency, route, duration, and clinical indication.</li>
+<li><strong>Drug Interaction &amp; Duplicate Warning:</strong> Automatically cross-references newly prescribed medications against the patient’s active prescriptions and documented allergies, preventing dangerous drug-drug interactions or duplicate therapeutic classes.</li>
+<li><strong>Inventory Tracking:</strong> Updates facility drug stocks upon dispensing, alerting pharmacy heads to pending stockouts of essential medicines.</li>
+</ul>
+<h3>4.10 Inter-Facility Referral &amp; Ambulance Dispatch Network</h3>
+<p>The <strong>Referrals Hub (<code>frontend/src/components/ReferralsHub.jsx</code>)</strong> transforms patient transfers:</p>
+<ul>
+<li><strong>Structured Referral Documents:</strong> Replaces handwritten transfer slips with comprehensive digital summaries containing vital signs history, primary diagnosis, diagnostic lab results, administered fluids/medications, and explicit clinical reasons for referral.</li>
+<li><strong>Referral Acceptance Protocol:</strong> Receiving referral centers review incoming transfer requests digitally, allowing departments to confirm bed and specialist availability before the ambulance arrives.</li>
+</ul>
+<h3>4.11 Clinical AI Decision Support Engine</h3>
+<p>The <strong>AI Clinical Hub (<code>frontend/src/components/AiClinicalHub.jsx</code>)</strong> augments practitioner decision-making:</p>
+<ul>
+<li><strong>Differential Diagnosis Generator:</strong> Analyzes entered chief complaints, vital signs, physical examination findings, and patient demographics to propose ranked differential diagnoses aligned with Ethiopian clinical guidelines.</li>
+<li><strong>Clinical SOAP Summarizer:</strong> Transforms free-form clinical notes into standardized, professional SOAP summaries for the medical record.</li>
+<li><strong>Drug Sentinel &amp; Guideline Adherence:</strong> Recommends first-line antibiotic regimens according to national standard treatment guidelines, promoting antimicrobial stewardship.</li>
+</ul>
+<h3>4.12 Patient Self-Service Portal &amp; National Digital Health Card</h3>
+<p>The <strong>Patient Portal (<code>frontend/src/components/PatientPortal.jsx</code>)</strong> empowers citizens:</p>
+<ul>
+<li><strong>Personal Health Record Access:</strong> Citizens can log in using their Fayda FIN to review their verified diagnoses, past hospital visits, active medications, and immunization history.</li>
+<li><strong>Digital Health Card with QR Code:</strong> Generates an official, printable <strong>National Digital Health Card (<code>DigitalHealthCardModal.jsx</code>)</strong> featuring an encrypted QR code containing emergency triage data (blood type, documented drug allergies, emergency contact phone, and sovereign verification URL). Paramedics and emergency clinicians can scan this card with any camera device to retrieve immediate life-saving triage parameters.</li>
+</ul>
+<hr>
+<h1>SECTION 5: NATIONAL CYBER DEFENSE SENTINEL &amp; SECURITY HARDENING</h1>
+<h3>5.1 National Threat Landscape &amp; Healthcare Critical Infrastructure Protection</h3>
+<p>The digitalization of national health data represents an invaluable strategic asset, making it a prime target for hostile state actors, ransomware syndicates, and insider threats. Under directives from the Information Network Security Administration (INSA), NPDMS is classified as <strong>Level-1 National Critical Information Infrastructure (NCII)</strong>. </p>
+<p>To safeguard the privacy, integrity, and availability of sovereign citizen health records, NPDMS embeds a state-of-the-art cybersecurity architecture directly into its application core.</p>
+<h3>5.2 Zero Trust Security Architecture &amp; Strict Role-Based Access Control (RBAC)</h3>
+<p>NPDMS enforces a strict <strong>Zero Trust</strong> architecture: &quot;Never trust, always verify.&quot; 
+Access to modules, endpoints, and records is gated by a rigorous <strong>Role-Based Access Control (RBAC) Matrix (<code>frontend/src/rbac.js</code>)</strong>:</p>
+<pre><code>+---------------------------------------------------------------------------------------------------------+
+|                                    NATIONAL RBAC PRIVILEGE MATRIX                                       |
++----------------------+-----------+-----+-----+-------+-----------+---------+------------+-------+-------+
+| Professional Role    | Patients  | EHR | CPOE| Surgy | Admissions| Lab/Diag| Pharmacy   | Audit | Admin |
++----------------------+-----------+-----+-----+-------+-----------+---------+------------+-------+-------+
+| SYSTEM_ADMIN         |    FULL   | FULL| FULL|  FULL |    FULL   |   FULL  |    FULL    |  FULL |  FULL |
+| FACILITY_ADMIN       |    FULL   | FULL| READ|  READ |    FULL   |   READ  |    READ    |  FULL |  FULL |
+| DOCTOR               |    FULL   | FULL| FULL|  FULL |    FULL   |   FULL  |   PRESCRIBE|  READ | DENIED|
+| NURSE                |    FULL   | FULL|VITLS|  READ |    FULL   |   READ  |    DISPENSE|  READ | DENIED|
+| PHARMACIST           |    READ   | READ| READ| DENIED|   DENIED  |  DENIED |    DISPENSE|  READ | DENIED|
+| LAB_TECH             |    READ   | READ| READ| DENIED|   DENIED  |   VERIFY|   DENIED   |  READ | DENIED|
+| REGISTRATION_OFFICER |    WRITE  | READ|DENID| DENIED|   DENIED  |  DENIED |   DENIED   |  READ | DENIED|
+| PATIENT (Self-Portal)|    SELF   | SELF| READ|  SELF |    SELF   |   SELF  |    SELF    |  SELF | DENIED|
++----------------------+-----------+-----+-----+-------+-----------+---------+------------+-------+-------+
+</code></pre>
+<p>Any attempt by a practitioner to access unauthorized modules (e.g., a Pharmacist attempting to open the Admin Governance Panel or a Doctor attempting to alter audit logs) is immediately intercepted by the frontend UI guard and backend API middleware, generating a <code>MODULE_ACCESS_RESTRICTED</code> security event.</p>
+<h3>5.3 Real-Time Cyber Sentinel: Heuristic Intrusion Detection Engine</h3>
+<p>Embedded inside <code>backend/server.js</code>, the <strong>National Cyber Defense Sentinel</strong> inspects every inbound HTTP request across headers, query parameters, URL paths, and JSON bodies against a comprehensive library of attack signatures:</p>
+<ul>
+<li><strong>SQL Injection (SQLi) Defense:</strong><ul>
+<li>Regex heuristics intercept classic and advanced injection vectors:<pre><code>(\bUNION\b.*\bSELECT\b|--|;|\bOR\b\s+\d+=\d+|\bDROP\b\s+\bTABLE\b|&#39;\s*OR\s*&#39;|SLEEP\(|BENCHMARK\()
+</code></pre>
+</li>
+<li>Combined with mandatory parameterized queries across both SQLite and PostgreSQL engines, rendering SQL injection mathematically impossible.</li>
+</ul>
+</li>
+<li><strong>Cross-Site Scripting (XSS) Defense:</strong><ul>
+<li>Intercepts <code>&lt;script&gt;</code>, <code>javascript:</code>, <code>onload=</code>, <code>onerror=</code>, <code>eval()</code>, and document object model manipulation payloads in all text inputs.</li>
+</ul>
+</li>
+<li><strong>Path Traversal &amp; Remote File Inclusion (RFI):</strong><ul>
+<li>Blocks <code>../</code>, <code>..\</code>, <code>/etc/passwd</code>, <code>/windows/system32</code>, and directory traversal probes.</li>
+</ul>
+</li>
+<li><strong>Command Injection (RCE):</strong><ul>
+<li>Detects shell command separators (<code>|</code>, <code>&amp;</code>, <code>;</code>, <code>`</code>, <code>$()</code>, <code>curl</code>, <code>wget</code>, <code>powershell</code>, <code>cmd.exe</code>).</li>
+</ul>
+</li>
+<li><strong>JSON Bomb &amp; Payload Size Limits:</strong><ul>
+<li>Enforces strict 1MB maximum payload limits on body parsing, neutralizing distributed denial-of-service (DDoS) memory exhaustion attempts.</li>
+</ul>
+</li>
+</ul>
+<h3>5.4 Automated IP Quarantine &amp; Governance Threat Broadcast Pipeline</h3>
+<p>When hostile payloads are detected, the system executes an automated, multi-tiered response:</p>
+<pre><code>[ Inbound Threat Detected: SQL Injection Payload ]
+                      │
+                      ▼
+[ 1. Immediate Interception: HTTP 403 NATIONAL_SECURITY_INTERCEPT ]
+                      │
+                      ▼
+[ 2. Automatic IP Quarantine: IP Address Banned for 15 Minutes ]
+                      │
+                      ▼
+[ 3. Database Persistence: Recorded to &#39;security_threats&#39; Ledger ]
+                      │
+                      ▼
+[ 4. Audit Trail Generation: Immutable Audit Log Entry Created ]
+                      │
+                      ▼
+[ 5. Live Telemetry Broadcast: Sent to Admin Governance Dashboard ]
+                      │
+                      ▼
+[ 6. Critical Threat SMS: Emergency Dispatched to INSA / MOH Admin ]
+</code></pre>
+<p>Hospital and ministry administrators monitoring the <strong>Cyber Defense Dashboard (<code>AdminDashboard.jsx → 🛡️ Cyber Defense Tab</code>)</strong> can observe real-time DEFCON threat levels, analyze attack type breakdowns, review quarantined IP addresses with manual unban controls, and simulate penetration testing attacks to verify defensive readiness.</p>
+<h3>5.5 Mandatory Two-Factor Authentication (2FA) for High-Privilege Practitioners</h3>
+<p>To neutralize credential theft and phishing attacks against hospital staff, NPDMS enforces mandatory step-up <strong>Two-Factor Authentication (<code>backend/server.js</code> lines 443–570)</strong> for all accounts carrying elevated privileges (<code>SYSTEM_ADMIN</code>, <code>FACILITY_ADMIN</code>, and <code>DOCTOR</code>):</p>
+<ol>
+<li><strong>Primary Authentication:</strong> The user enters their username/professional ID and password.</li>
+<li><strong>2FA Challenge Trigger:</strong> If the credentials are valid, the server halts login completion, generates a cryptographically random 6-digit OTP, stores it with a 10-minute expiry, and dispatches it via SMS to the practitioner’s registered Ethio Telecom number.</li>
+<li><strong>Step-Up Verification Screen:</strong> The frontend transitions to the 2FA modal (<code>LoginPage.jsx</code>), displaying the masked mobile number (<code>+251 ••• 4567</code>). The clinician enters the code.</li>
+<li><strong>Brute-Force Protection:</strong> Three consecutive incorrect OTP entries immediately lock the session, quarantine the client IP address, and flag the incident as a <code>BRUTE_FORCE</code> cyber attack.</li>
+</ol>
+<h3>5.6 Tamper-Evident Statutory Audit Trails (FDRE Proclamation No. 1110/2019)</h3>
+<p>In strict accordance with FDRE Proclamation No. 1110/2019 governing food, medicine, and healthcare administration, NPDMS implements an immutable audit ledger (<code>audit_logs</code> table). Every single read, write, update, login, logout, record export, emergency break-glass, and diagnostic verification is recorded with:</p>
+<ul>
+<li>Timestamp (UTC ISO 8601)</li>
+<li>User ID, Practitioner Full Name, and Professional Role</li>
+<li>Facility ID and Geographic Facility Code</li>
+<li>Patient ID (NPDMS ID)</li>
+<li>Action Type (<code>USER_LOGIN</code>, <code>CREATE_PATIENT</code>, <code>PUBLISH_LAB</code>, <code>BREAK_GLASS</code>, <code>EXPORT_FHIR</code>, <code>EXPORT_CSV</code>, etc.)</li>
+<li>Clinical Resource Type and Resource ID</li>
+<li>Justification Text</li>
+<li>Client IP Address and User-Agent Signature</li>
+</ul>
+<p>This audit trail cannot be modified or deleted through the application interface, ensuring complete evidentiary integrity for statutory compliance audits.</p>
+<h3>5.7 Cryptographic Data Protection</h3>
+<ul>
+<li><strong>Data in Transit:</strong> Enforces Transport Layer Security (TLS 1.3 / HTTPS) with strict HTTP Strict Transport Security (HSTS) headers, prohibiting unencrypted HTTP connections.</li>
+<li><strong>Data at Rest:</strong> Database volumes on cloud and edge instances are encrypted utilizing AES-256 block ciphers with sovereign hardware security module (HSM) key management.</li>
+<li><strong>Secure Password Hashing:</strong> Passwords utilize high-work-factor cryptographic hashing algorithms (Argon2id / PBKDF2 with SHA-256 and unique per-user cryptographic salts), neutralizing offline dictionary and rainbow table cracking.</li>
+</ul>
+<hr>
+<h1>SECTION 6: INTEROPERABILITY &amp; NATIONAL SYSTEMS INTEGRATION MATRIX</h1>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                 NPDMS NATIONAL INTEGRATION BUS                                     |
++----------------------------------------------------------------------------------------------------+
+|                                                                                                    |
+|    +-------------------+       +-----------------------+       +------------------------------+     |
+|    |   FAYDA (NIDP)    | &lt;---&gt; |   NPDMS HEALTH SPINE  | &lt;---&gt; |     DHIS2 / NHDIS HMIS       |     |
+|    | Biometric Identity|       |  (Federated Core Bus) |       |  Aggregate Indicators (ADX)  |     |
+|    +-------------------+       +-----------+-----------+       +------------------------------+     |
+|                                            |                                                       |
+|                                            ▼                                                       |
+|                        +-------------------+-------------------+                                   |
+|                        |   TELECOM &amp; MESSAGING CARRIERS        |                                   |
+|                        | Ethio Telecom SMPP | Safaricom Gateway|                                   |
+|                        +---------------------------------------+                                   |
++----------------------------------------------------------------------------------------------------+
+</code></pre>
+<h3>6.1 Integration with Fayda National Identity Platform (NIDP)</h3>
+<ul>
+<li><strong>Protocol:</strong> RESTful HTTPS Web Services with OAuth 2.0 Mutual-TLS Authentication.</li>
+<li><strong>Payload:</strong> ISO/IEC 19794-2 Fingerprint Minutiae and ISO/IEC 19794-6 Iris Biometric Templates.</li>
+<li><strong>Verification Modes:</strong><ol>
+<li><em>Online Biometric Verification:</em> Fingerprint scanner at registration desk sends encrypted minutiae to Fayda gateway; Fayda returns cryptographic validation token with verified citizen demographics.</li>
+<li><em>OTP Identity Verification:</em> Citizen&#39;s 12-digit FIN is submitted; Fayda dispatches authentication OTP to the citizen&#39;s registered SIM card.</li>
+<li><em>Demographic Fallback:</em> For infants and young children without biometrics, algorithmic matching resolves parent/guardian FIN linkage.</li>
+</ol>
+</li>
+</ul>
+<h3>6.2 Integration with DHIS2 / NHDIS Aggregate HMIS Reporting</h3>
+<p>NPDMS bridges the gap between individual clinical care and national public health reporting:</p>
+<ul>
+<li><strong>Automated Data Aggregation (<code>/api/admin/export/dhis2</code>):</strong> Rather than requiring health informatics technicians to manually tally paper registers at the end of each month, NPDMS automatically computes aggregate health indicators:<ul>
+<li>Total outpatient, inpatient, and emergency encounter volumes per facility.</li>
+<li>Maternal health indicators (ANC1, ANC4+, facility delivery rates).</li>
+<li>Immunization coverage rates per woreda.</li>
+<li>Disease-specific morbidity and mortality incidence according to ICD-11 classifications.</li>
+</ul>
+</li>
+<li><strong>Standard ADX Format:</strong> Outputs aggregate payloads formatted in standard <strong>DHIS2 ADX v2.4 JSON</strong> and flat <strong>DHIS2 CSV</strong> directly importable into the national NHDIS instance without manual re-keying.</li>
+</ul>
+<h3>6.3 Integration with Ethio Telecom &amp; Safaricom Ethiopia Messaging Infrastructure</h3>
+<ul>
+<li><strong>High-Throughput Gateway:</strong> Direct SMPP connection capable of dispatching up to 500 SMS messages per second.</li>
+<li><strong>Use Cases:</strong><ul>
+<li>Citizen OTP authorization tokens for record sharing.</li>
+<li>Immediate clinician alerts for critical laboratory panic values.</li>
+<li>Appointment and vaccination reminder notices to patients.</li>
+<li>Emergency security breach alerts to ministerial administrators.</li>
+</ul>
+</li>
+</ul>
+<h3>6.4 Legacy System Bridge: SmartCare-eHR, eCHIS, and OpenMRS Migration Protocol</h3>
+<p>To preserve past health information investments, NPDMS provides an automated migration bridge:</p>
+<ul>
+<li><strong>CSV / SQL Ingestion Pipeline:</strong> Accepts patient registries and encounter exports from legacy SmartCare and eCHIS instances.</li>
+<li><strong>Deduplication &amp; Fayda Linking:</strong> Ingested legacy records are cross-referenced against the Master Patient Index to resolve duplicate charts before committing to the national spine.</li>
+</ul>
+<hr>
+<h1>SECTION 7: DATABASE SCHEMA &amp; COMPREHENSIVE DATA DICTIONARY</h1>
+<p>The NPDMS database architecture is modeled across <strong>23 core relational tables</strong> (<code>backend/schema-postgres.sql</code> and <code>backend/database.js</code>). Below is the comprehensive data dictionary:</p>
+<h3>7.1 Healthcare Infrastructure &amp; Access Management Tables</h3>
+<h4>Table 1: <code>facilities</code> (Healthcare Facilities Directory)</h4>
+<p>Stores all registered hospitals, medical centers, health centers, and health posts in the Ethiopian health network.</p>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Unique facility identifier (e.g., <code>FAC-JUMC</code>, <code>FAC-TASH</code>).</li>
+<li><code>name</code> (VARCHAR(255), Not Null): Official name of healthcare facility.</li>
+<li><code>code</code> (VARCHAR(32), Unique, Not Null): Standardized facility code (e.g., <code>JMC-ETH</code>, <code>TASH-ETH</code>).</li>
+<li><code>type</code> (VARCHAR(64), Not Null): <code>SPECIALIZED_HOSPITAL</code>, <code>GENERAL_HOSPITAL</code>, <code>PRIMARY_HOSPITAL</code>, <code>HEALTH_CENTER</code>, <code>HEALTH_POST</code>.</li>
+<li><code>region</code> (VARCHAR(64), Not Null): Administrative region (Oromia, Amhara, Addis Ababa, Tigray, Sidama, etc.).</li>
+<li><code>zone</code> (VARCHAR(128), Not Null): Administrative zonal division.</li>
+<li><code>woreda</code> (VARCHAR(128), Not Null): Administrative district/woreda.</li>
+<li><code>phone</code>, <code>email</code>, <code>address</code> (TEXT): Official institutional contact details.</li>
+<li><code>bed_capacity</code> (INTEGER, Default 0): Total licensed operational bed count.</li>
+<li><code>latitude</code>, <code>longitude</code> (REAL/DOUBLE): Geospatial coordinates for ambulance dispatch and network mapping.</li>
+<li><code>director_name</code> (VARCHAR(255)): Name of chief executive/medical director.</li>
+<li><code>fayda_connected</code> (BOOLEAN/INT, Default 1): Fayda biometric connectivity status.</li>
+<li><code>nhdis_connected</code> (BOOLEAN/INT, Default 1): DHIS2 reporting link status.</li>
+<li><code>is_active</code> (BOOLEAN/INT, Default 1): Operational status flag.</li>
+<li><code>joined_at</code> (TIMESTAMPTZ, Default CURRENT_TIMESTAMP): Date registered on national spine.</li>
+</ul>
+<h4>Table 2: <code>users</code> (Staff &amp; Healthcare Practitioners)</h4>
+<p>Stores all authenticated clinical, administrative, and allied healthcare professionals.</p>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Unique user identifier (e.g., <code>USR-DOC-01</code>).</li>
+<li><code>username</code> (VARCHAR(64), Unique, Not Null): Login username.</li>
+<li><code>password_hash</code> (VARCHAR(255), Not Null): Cryptographic salted password hash.</li>
+<li><code>full_name</code> (VARCHAR(255), Not Null): Full professional name with title.</li>
+<li><code>role</code> (VARCHAR(64), Not Null): <code>SYSTEM_ADMIN</code>, <code>FACILITY_ADMIN</code>, <code>DOCTOR</code>, <code>NURSE</code>, <code>PHARMACIST</code>, <code>LAB_TECH</code>, <code>REGISTRATION_OFFICER</code>, <code>PATIENT</code>.</li>
+<li><code>facility_id</code> (VARCHAR(64), Foreign Key → <code>facilities.id</code>): Primary assigned health facility.</li>
+<li><code>professional_id</code> (VARCHAR(64)): National professional registration/license number (e.g., <code>ETH-MED-00123</code>).</li>
+<li><code>email</code> (VARCHAR(128)): Institutional email.</li>
+<li><code>phone</code> (VARCHAR(32)): Mobile number used for 2FA SMS verification.</li>
+<li><code>is_active</code> (BOOLEAN/INT, Default 1): Account active status.</li>
+</ul>
+<h3>7.2 Patient Identity &amp; Clinical History Tables</h3>
+<h4>Table 3: <code>patients</code> (Master Patient Index - MPI)</h4>
+<p>The central citizen identity repository for the entire health system.</p>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Internal unique patient UUID.</li>
+<li><code>npdms_id</code> (VARCHAR(64), Unique, Not Null): Public standardized national patient ID (<code>ETH-NPDMS-2026-XXXXXX</code>).</li>
+<li><code>fayda_fin</code> (VARCHAR(64), Unique): 12-digit Fayda National Identity Number.</li>
+<li><code>fayda_status</code> (VARCHAR(32), Default &#39;UNLINKED&#39;): <code>VERIFIED</code>, <code>UNLINKED</code>, <code>PENDING_REVIEW</code>.</li>
+<li><code>first_name</code>, <code>father_name</code>, <code>grandfather_name</code> (VARCHAR(128), Not Null): Full three-generation name in English.</li>
+<li><code>first_name_amharic</code>, <code>father_name_amharic</code> (VARCHAR(128)): Name in Ge&#39;ez/Amharic script.</li>
+<li><code>date_of_birth</code> (DATE, Not Null): Citizen birth date.</li>
+<li><code>gender</code> (VARCHAR(16), Not Null): <code>MALE</code>, <code>FEMALE</code>, <code>OTHER</code>.</li>
+<li><code>phone_number</code> (VARCHAR(32)): Primary mobile phone for OTP authorization.</li>
+<li><code>emergency_contact_name</code>, <code>emergency_contact_phone</code> (VARCHAR): Emergency next-of-kin contact.</li>
+<li><code>region</code>, <code>zone</code>, <code>woreda</code>, <code>kebele</code>, <code>house_number</code> (VARCHAR): Comprehensive residential address.</li>
+<li><code>blood_group</code> (VARCHAR(8)): ABO and Rh blood group (<code>A+</code>, <code>A-</code>, <code>B+</code>, <code>B-</code>, <code>AB+</code>, <code>AB-</code>, <code>O+</code>, <code>O-</code>).</li>
+<li><code>registered_facility_id</code> (VARCHAR(64), Foreign Key → <code>facilities.id</code>): Initial registration facility.</li>
+<li><code>created_at</code>, <code>updated_at</code> (TIMESTAMPTZ): Audit timestamps.</li>
+</ul>
+<h4>Table 4: <code>allergies</code> (Adverse Drug &amp; Substance Reactions)</h4>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Allergy record ID.</li>
+<li><code>patient_id</code> (VARCHAR(64), Foreign Key → <code>patients.id</code> ON DELETE CASCADE).</li>
+<li><code>substance</code> (VARCHAR(255), Not Null): Offending drug, food, or chemical agent.</li>
+<li><code>category</code> (VARCHAR(64)): <code>MEDICATION</code>, <code>FOOD</code>, <code>ENVIRONMENTAL</code>.</li>
+<li><code>severity</code> (VARCHAR(32), Not Null): <code>MILD</code>, <code>MODERATE</code>, <code>SEVERE</code>, <code>LIFE_THREATENING</code>.</li>
+<li><code>reaction</code> (TEXT): Clinical manifestation (e.g., Anaphylaxis, Angioedema, Urticaria, Stevens-Johnson).</li>
+<li><code>recorded_at</code> (TIMESTAMPTZ): Documentation timestamp.</li>
+</ul>
+<h4>Table 5: <code>encounters</code> (Clinical Consultations &amp; Visits)</h4>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Encounter ID.</li>
+<li><code>patient_id</code> (VARCHAR(64), Foreign Key → <code>patients.id</code> ON DELETE CASCADE).</li>
+<li><code>facility_id</code> (VARCHAR(64), Foreign Key → <code>facilities.id</code> ON DELETE CASCADE).</li>
+<li><code>practitioner_id</code> (VARCHAR(64), Foreign Key → <code>users.id</code> ON DELETE CASCADE).</li>
+<li><code>encounter_type</code> (VARCHAR(64), Not Null): <code>OUTPATIENT</code>, <code>INPATIENT</code>, <code>EMERGENCY</code>, <code>MATERNAL</code>, <code>VACCINATION</code>.</li>
+<li><code>department</code> (VARCHAR(128)): Internal clinical department.</li>
+<li><code>chief_complaint</code>, <code>history_of_presenting_illness</code> (TEXT): Clinical history.</li>
+<li><code>systolic_bp</code>, <code>diastolic_bp</code>, <code>heart_rate</code>, <code>temperature_celsius</code>, <code>respiratory_rate</code>, <code>oxygen_saturation</code>, <code>weight_kg</code>, <code>height_cm</code>: Standard vital signs.</li>
+<li><code>physical_examination</code>, <code>clinical_notes</code> (TEXT): Detailed clinical assessment.</li>
+<li><code>status</code> (VARCHAR(32), Default &#39;COMPLETED&#39;): Encounter status.</li>
+<li><code>started_at</code>, <code>ended_at</code> (TIMESTAMPTZ): Consultation duration.</li>
+</ul>
+<h4>Table 6: <code>diagnoses</code> (Diagnostic Classifications)</h4>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Diagnosis record ID.</li>
+<li><code>encounter_id</code> (VARCHAR(64), Foreign Key → <code>encounters.id</code> ON DELETE CASCADE).</li>
+<li><code>patient_id</code> (VARCHAR(64), Foreign Key → <code>patients.id</code> ON DELETE CASCADE).</li>
+<li><code>icd11_code</code> (VARCHAR(32), Not Null): WHO ICD-11 alphanumeric code.</li>
+<li><code>icd11_title</code> (VARCHAR(255), Not Null): Standard ICD-11 clinical condition title.</li>
+<li><code>diagnosis_type</code> (VARCHAR(32), Not Null): <code>PRIMARY</code>, <code>SECONDARY</code>, <code>ADMISSION</code>, <code>DISCHARGE</code>.</li>
+<li><code>certainty</code> (VARCHAR(32), Default &#39;CONFIRMED&#39;): <code>CONFIRMED</code>, <code>PROVISIONAL</code>, <code>SUSPECTED</code>.</li>
+<li><code>notes</code> (TEXT): Clinician diagnostic commentary.</li>
+<li><code>recorded_at</code> (TIMESTAMPTZ).</li>
+</ul>
+<h4>Table 7: <code>prescriptions</code> (Electronic Prescriptions &amp; Medication Orders)</h4>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Prescription ID.</li>
+<li><code>encounter_id</code> (VARCHAR(64), Foreign Key → <code>encounters.id</code>).</li>
+<li><code>patient_id</code> (VARCHAR(64), Foreign Key → <code>patients.id</code>).</li>
+<li><code>medication_name</code> (VARCHAR(255), Not Null): Generic and brand medicine name.</li>
+<li><code>dosage</code>, <code>route</code>, <code>frequency</code>, <code>duration_days</code> (VARCHAR/INTEGER, Not Null): Posology.</li>
+<li><code>dispense_quantity</code> (INTEGER): Total units to dispense.</li>
+<li><code>status</code> (VARCHAR(32), Default &#39;ACTIVE&#39;): <code>ACTIVE</code>, <code>DISPENSED</code>, <code>CANCELLED</code>, <code>COMPLETED</code>.</li>
+<li><code>dispensed_by</code> (VARCHAR(64), Foreign Key → <code>users.id</code>): Dispensing pharmacist.</li>
+<li><code>dispensed_at</code> (TIMESTAMPTZ), <code>dispense_notes</code> (TEXT).</li>
+<li><code>prescribed_at</code> (TIMESTAMPTZ).</li>
+</ul>
+<h4>Table 8: <code>lab_investigations</code> (Diagnostic Orders &amp; Results)</h4>
+<ul>
+<li><code>id</code> (VARCHAR(64), Primary Key): Investigation order ID.</li>
+<li><code>encounter_id</code> (VARCHAR(64), Foreign Key → <code>encounters.id</code>).</li>
+<li><code>patient_id</code> (VARCHAR(64), Foreign Key → <code>patients.id</code>).</li>
+<li><code>facility_id</code> (VARCHAR(64), Foreign Key → <code>facilities.id</code>).</li>
+<li><code>loinc_code</code> (VARCHAR(32)): Universal LOINC identifier.</li>
+<li><code>test_name</code> (VARCHAR(255), Not Null): Diagnostic test description.</li>
+<li><code>category</code> (VARCHAR(64), Not Null): <code>HEMATOLOGY</code>, <code>BIOCHEMISTRY</code>, <code>MICROBIOLOGY</code>, <code>PARASITOLOGY</code>, <code>SEROLOGY</code>.</li>
+<li><code>status</code> (VARCHAR(32), Default &#39;REQUESTED&#39;): <code>REQUESTED</code>, <code>IN_PROGRESS</code>, <code>COMPLETED</code>, <code>CANCELLED</code>.</li>
+<li><code>specimen_type</code>, <code>specimen_collected_at</code> (VARCHAR/TIMESTAMPTZ).</li>
+<li><code>result_numeric</code> (NUMERIC), <code>result_text</code> (TEXT), <code>result_unit</code> (VARCHAR(32)).</li>
+<li><code>reference_range_low</code>, <code>reference_range_high</code> (NUMERIC): Biological reference intervals.</li>
+<li><code>is_critical</code> (BOOLEAN, Default FALSE): Panic/critical threshold trigger.</li>
+<li><code>technician_id</code> (VARCHAR(64), Foreign Key → <code>users.id</code>): Authorizing technologist.</li>
+<li><code>completed_at</code>, <code>requested_at</code> (TIMESTAMPTZ).</li>
+</ul>
+<h3>7.3 Hospital Operations, Continuity &amp; Security Tables</h3>
+<h4>Table 9: <code>procedures</code> (Surgeries &amp; Operative Notes)</h4>
+<h4>Table 10: <code>admissions</code> (Inpatient Admissions &amp; Bed Allocations)</h4>
+<h4>Table 11: <code>appointments</code> (Outpatient Clinic Schedules)</h4>
+<h4>Table 12: <code>referrals</code> (Cross-Hospital Transfer Documents)</h4>
+<h4>Table 13: <code>audit_logs</code> (Statutory Compliance &amp; Security Trail)</h4>
+<h4>Table 14: <code>duplicate_reviews</code> (Fuzzy Identity Collision Reviews)</h4>
+<h4>Table 15: <code>otp_requests</code> (Cross-Hospital Authorization Tokens)</h4>
+<h4>Table 16: <code>record_access_consents</code> (Patient Privacy Consent Grants)</h4>
+<h4>Table 17: <code>vaccinations</code> (National Childhood &amp; Adult Immunization Registry)</h4>
+<h4>Table 18: <code>maternal_records</code> (Antenatal &amp; Postnatal Care Registry)</h4>
+<h4>Table 19: <code>notifications</code> (SMS Outbound Patient Reminders)</h4>
+<h4>Table 20: <code>blood_inventory</code> (Regional Cold-Chain Blood Bank Stocks)</h4>
+<h4>Table 21: <code>blood_requests</code> (Emergency Inter-Facility Transfusion Exchanges)</h4>
+<h4>Table 22: <code>security_threats</code> (National Cyber Defense Intrusion Ledger)</h4>
+<h4>Table 23: <code>sms_logs</code> (Telecommunications Outbound Transmission Ledger)</h4>
+<hr>
+<h1>SECTION 8: DEPLOYMENT INFRASTRUCTURE, SCALABILITY &amp; OFFLINE RESILIENCE</h1>
+<h3>8.1 Serverless Cloud Deployment Architecture</h3>
+<p>NPDMS utilizes a decoupled, modern cloud deployment topology designed for zero-downtime scaling:</p>
+<ul>
+<li><strong>Frontend Presentation Layer:</strong> Deployed as an edge-optimized Single Page Application (SPA) on Vercel Global Edge Network with automatic Brotli compression, immutable asset caching, and global Anycast DNS routing.</li>
+<li><strong>Backend Application Layer:</strong> Built with Node.js and Express, configured for dual-runtime execution:<ul>
+<li>Standard containerized daemon execution on dedicated ministerial servers (<code>node backend/server.js</code>).</li>
+<li>Serverless function execution on Vercel Edge (<code>module.exports = app</code>), eliminating server maintenance overhead during initial pilot rollouts.</li>
+</ul>
+</li>
+<li><strong>Database Engine:</strong> Managed PostgreSQL cluster hosted on <strong>Neon Serverless Engine / Supabase Enterprise</strong>, providing automated branch environments, compute auto-scaling from 0.5 to 16 vCPUs based on request concurrency, and daily automated encrypted cold backups.</li>
+</ul>
+<h3>8.2 On-Premises Ethiopian National Data Center (INSA/MINT) Hybrid Topology</h3>
+<p>For ultimate national data sovereignty, NPDMS is fully prepared for containerized on-premises deployment within Ethiopia:</p>
+<ul>
+<li><strong>Containerization:</strong> Complete Docker and Kubernetes (K8s) deployment manifests allowing automated orchestration on ministerial server racks in Addis Ababa.</li>
+<li><strong>Hardware Specifications:</strong> Standardized on dual-redundant Dell PowerEdge rack servers with hardware RAID-10 NVMe storage arrays, dual 10Gbps SFP+ network interfaces, and uninterruptible power supplies (UPS) backed by automatic generator transfer switches.</li>
+</ul>
+<h3>8.3 Offline Synchronization &amp; Conflict Resolution Protocol</h3>
+<p>When rural health posts sync offline encounters back to the national spine, conflicts are resolved utilizing a deterministic <strong>Vector-Timestamp and Originating-Clinician Authority Algorithm</strong>:</p>
+<ol>
+<li>Client records are committed with immutable UUIDs and local creation timestamps.</li>
+<li>The server compares incoming records against existing database states.</li>
+<li>Because medical consultations represent append-only historical facts (a consultation performed at 10:00 AM cannot be overwritten by one at 2:00 PM), encounters are appended rather than mutated, preserving full forensic history.</li>
+<li>Patient demographics conflicts (e.g., phone number updated offline vs online) prioritize the record verified by Fayda biometric authentication.</li>
+</ol>
+<hr>
+<h1>SECTION 9: IMPLEMENTATION ROADMAP, SITE READINESS &amp; PHASED ROLLOUT</h1>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                    NPDMS 36-MONTH ROLLOUT PHASES                                   |
++------------------------------------+----------------------------------+----------------------------+
+| PHASE I (Months 1–6)               | PHASE II (Months 7–18)           | PHASE III (Months 19–36)   |
++------------------------------------+----------------------------------+----------------------------+
+| Tier-1 Specialized &amp; Teaching      | Regional Referral &amp; General      | Primary Hospitals, Rural   |
+| Medical Centers (20 Hospitals)     | Hospitals across all 12 Regions  | Health Centers &amp; Posts     |
+| - Jimma Medical Center (JMC)       | - 400 General Facilities         | - 3,800 Health Centers     |
+| - Tikur Anbessa Hospital (TASH)    | - Regional Blood Bank Sync       | - 18,000 Health Posts      |
+| - ALERT, St. Paul&#39;s, Ayder, Gondar | - DHIS2 Aggregate Automation     | - Solar-Powered Tablet PWA |
++------------------------------------+----------------------------------+----------------------------+
+</code></pre>
+<h3>9.1 Phase I: Tier-1 Specialized Referral &amp; University Teaching Hospitals (Months 1–6)</h3>
+<ul>
+<li><strong>Scope:</strong> 20 major comprehensive specialized hospitals across Addis Ababa, Oromia, Amhara, Tigray, and Sidama.</li>
+<li><strong>Milestones:</strong><ul>
+<li>Deployment of high-speed local hospital servers and optical fiber LAN backbones.</li>
+<li>Integration with Fayda biometric registration desks at main triage gates.</li>
+<li>Training of 2,500 clinical specialists, medical residents, nurses, and pharmacists.</li>
+<li>Activation of inter-hospital referral hub and cross-hospital OTP record sharing between JMC and Tikur Anbessa.</li>
+</ul>
+</li>
+</ul>
+<h3>9.2 Phase II: Regional Referral &amp; General Hospitals Across 12 Regions (Months 7–18)</h3>
+<ul>
+<li><strong>Scope:</strong> 400 General Hospitals distributed across all regional health bureaus.</li>
+<li><strong>Milestones:</strong><ul>
+<li>Activation of national emergency cold-chain blood bank network.</li>
+<li>Rollout of automated DHIS2 / NHDIS HMIS reporting pipelines, retiring manual monthly paper tally sheets.</li>
+<li>Implementation of e-Pharmacy and computerized physician order entry (CPOE).</li>
+</ul>
+</li>
+</ul>
+<h3>9.3 Phase III: Primary Hospitals, Rural Health Centers &amp; Health Posts (Months 19–36)</h3>
+<ul>
+<li><strong>Scope:</strong> 3,800 Health Centers and 18,000 Health Posts.</li>
+<li><strong>Milestones:</strong><ul>
+<li>Distribution of ruggedized, solar-rechargeable Android tablets equipped with the NPDMS Offline-First PWA (<code>sw.js</code>).</li>
+<li>Training of Health Extension Workers (HEWs) in digital antenatal care (ANC) registration and childhood vaccination tracking.</li>
+<li>Complete nationwide coverage linking every citizen to the digital health spine.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h1>SECTION 10: GOVERNANCE, CHANGE MANAGEMENT &amp; CAPACITY BUILDING</h1>
+<h3>10.1 Project Steering Committee &amp; Governance Structure</h3>
+<p>The governance of NPDMS is structured to ensure ministerial oversight, technical excellence, and regional representation:</p>
+<pre><code>                  +-------------------------------------------------------+
+                  |           NATIONAL DIGITAL HEALTH STEERING COMMITTEE  |
+                  | Chair: Minister of Health                             |
+                  | Co-Chairs: State Ministers, MInT, INSA, Fayda Director|
+                  +---------------------------+---------------------------+
+                                              |
+                   +--------------------------+--------------------------+
+                   |                                                     |
+                   ▼                                                     ▼
++--------------------------------------+      +--------------------------------------+
+|  TECHNICAL WORKING GROUP (TWG)       |      |  REGIONAL HEALTH BUREAU (RHB) TASKFORCE
+|  - Lead Software Architects          |      |  - Regional Health Bureau Heads (x12)|
+|  - INSA Cyber Defense Liaisons       |      |  - Zonal Health Department Directors |
+|  - Clinical Informatics Specialists  |      |  - Hospital Chief Executive Officers |
++--------------------------------------+      +--------------------------------------+
+</code></pre>
+<h3>10.2 Role-Based Training Curriculum</h3>
+<p>To ensure seamless adoption across diverse educational backgrounds, the training curriculum is tailored to specific professional roles:</p>
+<ul>
+<li><strong>Physicians &amp; Specialists (24 Hours):</strong> CPOE ordering, ICD-11 diagnostic coding, Longitudinal EHR review, Clinical AI decision support, Break-Glass emergency protocols.</li>
+<li><strong>Nurses &amp; Midwives (16 Hours):</strong> Vitals entry, Triage classification, Inpatient bed updates, ANC/PNC high-risk flagging, Medication administration recording.</li>
+<li><strong>Laboratory Technologists (12 Hours):</strong> Worklist queue management, Quantitative result validation, Panic value auto-SMS alerts, LOINC coding.</li>
+<li><strong>Pharmacists (12 Hours):</strong> Electronic prescription dispensing, Drug-drug interaction verification, Inventory deduction, Stockout warning analysis.</li>
+<li><strong>Health Extension Workers (20 Hours - Bilingual Amharic/Afaan Oromoo):</strong> Offline PWA tablet navigation, Child immunization scheduling, Maternal registration, Community health reporting.</li>
+</ul>
+<hr>
+<h1>SECTION 11: FINANCIAL PLAN, DETAILED BUDGET BREAKDOWN &amp; ECONOMIC JUSTIFICATION</h1>
+<h3>11.1 Comprehensive 3-Year Budget (USD &amp; ETB)</h3>
+<p>The financial plan reflects all capital investments and recurring operational commitments:</p>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                         NATIONAL BUDGET BREAKDOWN (YEARS 1 TO 3)                                   |
++----------------------------------------------------+-----------------------+-----------------------+
+| Budget Category / Expenditure Item                 | Cost (USD)            | Cost (ETB - Approx)   |
++----------------------------------------------------+-----------------------+-----------------------+
+| 1. CORE SOFTWARE ENGINEERING &amp; SECURITY HARDENING  |                       |                       |
+|   - Full-Stack Health Spine Engineering            | $ 350,000             | ETB 42,000,000        |
+|   - National Cyber Defense Sentinel &amp; WAF Engine   | $ 180,000             | ETB 21,600,000        |
+|   - Fayda Biometric &amp; Telecom Gateway Adapters     | $ 120,000             | ETB 14,400,000        |
+|   - Independent INSA Cybersecurity Audit &amp; Cert    | $  95,000             | ETB 11,400,000        |
++----------------------------------------------------+-----------------------+-----------------------+
+| 2. DATA CENTER &amp; CLOUD INFRASTRUCTURE (3 YEARS)    |                       |                       |
+|   - Managed High-Availability PostgreSQL Cluster   | $ 240,000             | ETB 28,800,000        |
+|   - Edge Computing, CDN &amp; Vercel Enterprise Cloud  | $ 150,000             | ETB 18,000,000        |
+|   - National Data Center On-Premises Hardware Racks| $ 620,000             | ETB 74,400,000        |
+|   - Uninterruptible Power Supplies (UPS) &amp; Backup  | $ 280,000             | ETB 33,600,000        |
++----------------------------------------------------+-----------------------+-----------------------+
+| 3. SITE HARDWARE &amp; TERMINALS (PHASE I &amp; II)        |                       |                       |
+|   - Biometric Triage Terminals (Fayda Scanners x500| $ 250,000             | ETB 30,000,000        |
+|   - Ruggedized Solar Clinical Tablets (x10,000)    | $ 1,800,000           | ETB 216,000,000       |
+|   - Hospital Department Workstations (PC Units)    | $ 950,000             | ETB 114,000,000       |
++----------------------------------------------------+-----------------------+-----------------------+
+| 4. TELECOMMUNICATIONS &amp; SMS GATEWAY COSTS          |                       |                       |
+|   - Ethio Telecom Bulk SMS Traffic (50M Messages)  | $ 190,000             | ETB 22,800,000        |
+|   - Dedicated APN &amp; Secure Fiber Lines             | $ 140,000             | ETB 16,800,000        |
++----------------------------------------------------+-----------------------+-----------------------+
+| 5. CAPACITY BUILDING, TRAINING &amp; ROLLOUT           |                       |                       |
+|   - Nationwide Clinician &amp; Informatics Training    | $ 580,000             | ETB 69,600,000        |
+|   - Regional Change Management &amp; Support Desks     | $ 220,000             | ETB 26,400,000        |
+|   - Monitoring, Evaluation &amp; Field Verification    | $ 160,000             | ETB 19,200,000        |
++----------------------------------------------------+-----------------------+-----------------------+
+| TOTAL 3-YEAR INVESTMENT ESTIMATE                   | $ 6,325,000           | ETB 759,000,000       |
++----------------------------------------------------+-----------------------+-----------------------+
+</code></pre>
+<h3>11.2 Economic Return on Investment (ROI)</h3>
+<p>The implementation of NPDMS delivers substantial, quantifiable financial returns to the Ethiopian state:</p>
+<ul>
+<li><strong>Direct Reagent &amp; Testing Savings:</strong> Eliminating 42% of unnecessary duplicate laboratory tests saves the public health system an estimated <strong>$14.8 Million USD (ETB 1.77 Billion)</strong> over three years.</li>
+<li><strong>Paper &amp; Physical Storage Elimination:</strong> Retiring paper medical charts and physical warehouse archives saves over <strong>$3.2 Million USD</strong> in stationery, physical archiving logistics, and clerical labor.</li>
+<li><strong>Maternal &amp; Emergency Life-Years Saved:</strong> By curbing referral delays and fatal drug-allergy interactions, NPDMS preserves thousands of productive citizen life-years, generating a compound economic return exceeding <strong>480% over a 5-year operational horizon</strong>.</li>
+</ul>
+<hr>
+<h1>SECTION 12: RISK ASSESSMENT, THREAT MATRIX &amp; MITIGATION STRATEGIES</h1>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                    RISK &amp; MITIGATION MATRIX                                        |
++--------------------------+----------+--------------------------------------------------------------+
+| Risk Description         | Severity | Preventative Architecture &amp; Mitigation Strategy              |
++--------------------------+----------+--------------------------------------------------------------+
+| 1. Prolonged Rural Power | HIGH     | Deployment of low-power ARM architecture tablets with solar   |
+|    &amp; Grid Outages        |          | charging packs and local PWA offline storage.                |
++--------------------------+----------+--------------------------------------------------------------+
+| 2. Fiber Cut / Internet  | HIGH     | Offline-First Service Worker architecture (v2.5.0) caching   |
+|    Blackouts             |          | consultations in IndexedDB with automated background sync.   |
++--------------------------+----------+--------------------------------------------------------------+
+| 3. Targeted Cyber Attack | CRITICAL | Embedded National Cyber Defense Sentinel with real-time WAF, |
+|    or Ransomware Ingress |          | automated IP quarantine, 2FA, and INSA telemetry broadcast.  |
++--------------------------+----------+--------------------------------------------------------------+
+| 4. User Resistance to    | MEDIUM   | Intuitive role-based landing views, Amharic/Oromo language   |
+|    Digital Workflows     |          | support, and integration with mandatory CME accreditation.   |
++--------------------------+----------+--------------------------------------------------------------+
+| 5. Duplicate Identity    | MEDIUM   | Integration with Fayda biometric deduplication combined with |
+|    Collision             |          | fuzzy Jaro-Winkler administrative review queues.             |
++--------------------------+----------+--------------------------------------------------------------+
+</code></pre>
+<hr>
+<h1>SECTION 13: MONITORING, EVALUATION &amp; NATIONAL HEALTH KPIS</h1>
+<p>The effectiveness of NPDMS is continuously measured against standardized performance benchmarks:</p>
+<ul>
+<li><strong>System Uptime &amp; Availability:</strong> Minimum <strong>99.95% operational availability</strong> across all tertiary hospital nodes.</li>
+<li><strong>Average Record Retrieval Latency:</strong> Less than <strong>1.2 seconds</strong> for complete longitudinal patient timeline retrieval under standard broadband, and less than <strong>300 milliseconds</strong> on local edge caches.</li>
+<li><strong>Cross-Hospital Referral Acceptance Time:</strong> Reduction in referral review and acceptance times from an average of 4.8 hours to <strong>under 15 minutes</strong>.</li>
+<li><strong>Critical Lab Notification Delivery:</strong> 100% of critical panic laboratory values dispatched and delivered to attending clinician mobile phones within <strong>60 seconds</strong> of laboratory verification.</li>
+</ul>
+<hr>
+<h1>SECTION 14: COMPLETE REST API &amp; HL7 FHIR ENDPOINTS CATALOG</h1>
+<p>NPDMS exposes an extensive, secure, and documented API surface (<code>backend/server.js</code>):</p>
+<h3>14.1 Authentication &amp; Security Endpoints</h3>
+<ul>
+<li><code>POST /api/auth/login</code> — Authenticates practitioner credentials; triggers 2FA challenge for high-privilege roles.</li>
+<li><code>POST /api/auth/2fa/verify</code> — Validates 6-digit SMS OTP to complete practitioner login.</li>
+<li><code>POST /api/auth/2fa/resend</code> — Generates and dispatches new 2FA code via SMS gateway.</li>
+<li><code>POST /api/auth/fayda-otp/send</code> — Initiates biometric/FIN identity challenge via citizen SIM.</li>
+<li><code>POST /api/auth/fayda-otp/verify</code> — Validates Fayda OTP and logs in practitioner or citizen.</li>
+<li><code>POST /api/auth/forgot-password/request-otp</code> — Dispatches password recovery token via Ethio Telecom.</li>
+<li><code>POST /api/auth/forgot-password/reset</code> — Commits new password with valid recovery token.</li>
+</ul>
+<h3>14.2 Master Patient Index (MPI) Endpoints</h3>
+<ul>
+<li><code>GET /api/patients</code> — Retrieves paginated patient registry with search, facility, and Fayda filters.</li>
+<li><code>GET /api/patients/:id</code> — Resolves comprehensive single patient record by internal ID or NPDMS ID.</li>
+<li><code>POST /api/patients</code> — Registers new citizen record; initiates Fayda biometric deduplication.</li>
+<li><code>PUT /api/patients/:id</code> — Updates patient demographics and residential address.</li>
+<li><code>GET /api/duplicates</code> — Retrieves pending identity collision queue for administrative review.</li>
+<li><code>POST /api/duplicates/:id/resolve</code> — Resolves or merges duplicate patient records.</li>
+</ul>
+<h3>14.3 Clinical Care &amp; Hospital Services Endpoints</h3>
+<ul>
+<li><code>GET /api/encounters/patient/:patientId</code> — Retrieves all longitudinal clinical consultations across facilities.</li>
+<li><code>POST /api/encounters</code> — Commits new clinical consultation encounter with vitals and SOAP notes.</li>
+<li><code>POST /api/sync/batch</code> — Ingests batch of offline-recorded encounters from rural PWA queues.</li>
+<li><code>GET /api/prescriptions/patient/:patientId</code> — Retrieves active and historical prescriptions.</li>
+<li><code>POST /api/prescriptions</code> — Issues new electronic prescription with drug interaction checking.</li>
+<li><code>PUT /api/prescriptions/:id/dispense</code> — Dispenses prescription and deducts pharmacy inventory.</li>
+<li><code>GET /api/labs/queue</code> — Retrieves central laboratory pending investigation worklist.</li>
+<li><code>POST /api/labs/:id/publish</code> — Publishes verified diagnostic result; triggers Critical Lab Auto-SMS.</li>
+<li><code>GET /api/surgeries</code> — Retrieves surgical suite roster and operative schedules.</li>
+<li><code>POST /api/surgeries</code> — Commits surgical report with pre/post-op diagnoses and findings.</li>
+<li><code>GET /api/admissions/beds</code> — Live bed capacity matrix across hospital wards.</li>
+<li><code>POST /api/admissions</code> — Admits patient to inpatient ward and reserves bed number.</li>
+<li><code>GET /api/blood-bank/inventory</code> — Live regional cold-chain blood bank stock counts.</li>
+<li><code>POST /api/blood-bank/requests</code> — Dispatches emergency inter-hospital blood transfer request.</li>
+<li><code>GET /api/referrals</code> — Inter-hospital referral transfer queue.</li>
+<li><code>POST /api/referrals</code> — Dispatches structured emergency referral document.</li>
+<li><code>POST /api/ai/diagnose</code> — Invokes Clinical AI differential diagnosis and drug interaction guard.</li>
+</ul>
+<h3>14.4 Cross-Hospital Authorization &amp; Consent Endpoints</h3>
+<ul>
+<li><code>POST /api/otp/request</code> — Generates and dispatches 6-digit SMS OTP to patient for record sharing.</li>
+<li><code>POST /api/otp/verify</code> — Verifies OTP code and issues 24-hour cross-hospital consent grant.</li>
+<li><code>POST /api/otp/break-glass</code> — Executes emergency override access with high-priority audit broadcast.</li>
+</ul>
+<h3>14.5 HL7 FHIR R4 Interoperability Endpoints</h3>
+<ul>
+<li><code>GET /api/fhir/Patient/:id</code> — Exports patient demographics formatted as HL7 FHIR R4 <code>Patient</code> resource.</li>
+<li><code>GET /api/fhir/Bundle/:patientId</code> — Exports complete clinical chart as standard HL7 FHIR R4 <code>Bundle</code>.</li>
+</ul>
+<h3>14.6 Governance, Export &amp; Cyber Defense Endpoints</h3>
+<ul>
+<li><code>GET /api/admin/overview</code> — High-level governance KPIs and hospital operational summaries.</li>
+<li><code>GET /api/admin/system-health</code> — Real-time server telemetry, uptime, memory, and database stats.</li>
+<li><code>GET /api/admin/database/status</code> — Reports database engine mode (PostgreSQL vs SQLite) and counts.</li>
+<li><code>GET /api/admin/audit-logs</code> — Tamper-evident statutory audit trail with action and date filters.</li>
+<li><code>GET /api/admin/security/overview</code> — Situational cyber defense report, DEFCON threat level, quarantined IPs.</li>
+<li><code>GET /api/admin/security/threats</code> — Detailed intrusion detection ledger with payload snippets.</li>
+<li><code>POST /api/admin/security/simulate-attack</code> — Governance penetration testing and sentinel verification.</li>
+<li><code>POST /api/admin/security/unban-ip</code> — Administrative release of quarantined IP addresses.</li>
+<li><code>GET /api/admin/sms/logs</code> — Outbound telecommunications transmission ledger and delivery rates.</li>
+<li><code>POST /api/admin/sms/test</code> — Dispatches live test notification across Ethio Telecom gateway.</li>
+<li><code>GET /api/admin/export/patients</code> — CSV export of national patient demographics.</li>
+<li><code>GET /api/admin/export/audit</code> — CSV compliance export of statutory audit trails.</li>
+<li><code>GET /api/admin/export/staff</code> — CSV export of national clinical workforce directory.</li>
+<li><code>GET /api/admin/export/dhis2</code> — Standard DHIS2 ADX v2.4 JSON aggregate indicator payload.</li>
+<li><code>GET /api/admin/export/dhis2/csv</code> — Standard DHIS2 flat CSV aggregate indicator export.</li>
+</ul>
+<hr>
+<h1>SECTION 15: STATUTORY MANDATE, DATA SOVEREIGNTY &amp; APPROVAL BLOCK</h1>
+<h3>15.1 Compliance with Ethiopian Proclamations</h3>
+<p>NPDMS is designed and deployed in strict adherence to the laws and decrees of the Federal Democratic Republic of Ethiopia:</p>
+<ol>
+<li><strong>FDRE Proclamation No. 1110/2019:</strong> Food and Healthcare Administration and Control Proclamation, mandating the protection, confidentiality, and statutory recording of healthcare interactions.</li>
+<li><strong>FDRE Proclamation No. 1284/2023:</strong> National Identity Program Proclamation, establishing Fayda as the foundational digital identification system for all public services in Ethiopia.</li>
+<li><strong>INSA Information Security Directives:</strong> Mandating perimeter protection, encryption of sensitive personal records, zero foreign data hosting for critical infrastructure, and real-time security event telemetry.</li>
+</ol>
+<h3>15.2 National Data Sovereignty Declaration</h3>
+<p>All clinical data, patient demographic identifiers, biometric templates, diagnostic images, and audit ledgers generated within the National Patient Data Management System remain the exclusive, sovereign property of the Federal Democratic Republic of Ethiopia. Under no circumstances may patient medical data be exported, transferred, hosted, or analyzed outside the sovereign borders of Ethiopia without explicit, written executive authorization from the Council of Ministers and the Ministry of Health.</p>
+<hr>
+<h3>15.3 Official Ministerial Approval Block</h3>
+<pre><code>========================================================================================
+                          OFFICIAL MINISTERIAL SIGN-OFF &amp; MANDATE
+========================================================================================
+
+SUBMITTED BY:
+
+________________________________________            Date: ____ / ____ / 2026
+Lead Software Architect &amp; Project Director,
+National Patient Data Management System Implementation Team
+Federal Ministry of Health, Addis Ababa, Ethiopia
+
+
+REVIEWED AND ENDORSED BY:
+
+________________________________________            Date: ____ / ____ / 2026
+Director General,
+Information Technology &amp; Digital Health Directorate,
+Federal Ministry of Health, Addis Ababa, Ethiopia
+
+
+CYBERSECURITY CLEARANCE &amp; ACCREDITATION:
+
+________________________________________            Date: ____ / ____ / 2026
+Director of Critical Infrastructure Cyber Defense,
+Information Network Security Administration (INSA),
+Federal Democratic Republic of Ethiopia
+
+
+FINAL APPROVAL AND EXECUTIVE MANDATE:
+
+________________________________________            Date: ____ / ____ / 2026
+Her Excellency / His Excellency,
+Minister of Health,
+Federal Ministry of Health (FDRE - MoH),
+Addis Ababa, Federal Democratic Republic of Ethiopia
+
+========================================================================================
+                          [ END OF OFFICIAL PROPOSAL DOCUMENT ]
+========================================================================================
+</code></pre>
+
+  </div>
+
+</body>
+</html>
