@@ -3350,6 +3350,159 @@ app.get('/api/admin/system-health', (req, res) => {
   }
 });
 
+// POST /api/admin/facilities — Register a new healthcare facility to the network
+app.post('/api/admin/facilities', (req, res) => {
+  try {
+    const { name, code, type, region, zone, woreda, phone, email, bed_capacity, director_name } = req.body;
+    if (!name || !code || !type || !region || !zone || !woreda) {
+      return res.status(400).json({ error: 'name, code, type, region, zone, and woreda are required.' });
+    }
+    const existing = db.prepare('SELECT id FROM facilities WHERE code = ?').get(code);
+    if (existing) return res.status(409).json({ error: `Facility code "${code}" is already registered in the NPDMS network.` });
+    const id = 'FAC-' + code.toUpperCase();
+    db.prepare(`
+      INSERT INTO facilities (id, name, code, type, region, zone, woreda, phone, email, bed_capacity, director_name, fayda_connected, nhdis_connected, is_active, joined_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, datetime('now'))
+    `).run(id, name.trim(), code.trim().toUpperCase(), type, region, zone, woreda, phone || null, email || null, bed_capacity || 0, director_name || null);
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', id, null, 'CREATE_FACILITY', 'FACILITY', `Registered new facility: ${name} (${code})`);
+    res.json({ success: true, id, message: `${name} has been registered and connected to the NPDMS Health Spine.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/users/:id/reset-password — Admin password reset
+app.put('/api/admin/users/:id/reset-password', (req, res) => {
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    const tempPass = 'NPDMS-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(tempPass, req.params.id);
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', user.facility_id || 'SYS', null, 'RESET_PASSWORD', 'USER', `Password reset for: ${user.full_name}`);
+    res.json({ success: true, temporary_password: tempPass, message: `Password for ${user.full_name} has been reset. Temporary password: ${tempPass}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/alerts — System-wide critical alerts
+app.get('/api/admin/alerts', (req, res) => {
+  try {
+    const alerts = [];
+    // Break-glass events in last 24h
+    const breakGlass24h = db.prepare("SELECT COUNT(*) as c FROM audit_logs WHERE action = 'BREAK_GLASS' AND created_at >= datetime('now', '-24 hours')").get().c;
+    if (breakGlass24h > 0) alerts.push({ severity: 'CRITICAL', type: 'BREAK_GLASS', title: `${breakGlass24h} Emergency Break-Glass Access${breakGlass24h > 1 ? 'es' : ''} in Last 24h`, description: 'Unauthorized or emergency record access detected. Review audit trail immediately.', count: breakGlass24h });
+    // Pending duplicate reviews
+    const pendingDups = db.prepare("SELECT COUNT(*) as c FROM duplicate_reviews WHERE status = 'PENDING_REVIEW'").get().c;
+    if (pendingDups > 0) alerts.push({ severity: 'WARNING', type: 'DUPLICATE', title: `${pendingDups} Unresolved Duplicate Patient Record${pendingDups > 1 ? 's' : ''}`, description: 'Potential duplicate patient registrations require administrative review and merge decision.', count: pendingDups });
+    // Pending lab orders older than 2 days
+    const staleLabs = db.prepare("SELECT COUNT(*) as c FROM lab_investigations WHERE status = 'ORDERED' AND ordered_at <= datetime('now', '-2 days')").get().c;
+    if (staleLabs > 0) alerts.push({ severity: 'WARNING', type: 'STALE_LABS', title: `${staleLabs} Overdue Lab Investigation${staleLabs > 1 ? 's' : ''}`, description: 'Laboratory orders pending for more than 48 hours without results.', count: staleLabs });
+    // Pending referrals
+    const pendingRefs = db.prepare("SELECT COUNT(*) as c FROM referrals WHERE status = 'PENDING'").get().c;
+    if (pendingRefs > 0) alerts.push({ severity: 'INFO', type: 'REFERRAL', title: `${pendingRefs} Pending Inter-Facility Referral${pendingRefs > 1 ? 's' : ''}`, description: 'Referrals awaiting acceptance by receiving facilities.', count: pendingRefs });
+    // Blood bank critical levels
+    try {
+      const criticalBlood = db.prepare("SELECT blood_group, SUM(units_available) as total FROM blood_inventory GROUP BY blood_group HAVING total <= 2").all();
+      criticalBlood.forEach(b => {
+        alerts.push({ severity: 'CRITICAL', type: 'BLOOD_BANK', title: `Critical Blood Supply: ${b.blood_group} (${b.total} unit${b.total !== 1 ? 's' : ''})`, description: `National supply of ${b.blood_group} blood is critically low across all facilities.`, count: b.total });
+      });
+    } catch (_) {}
+    // Deactivated staff still appearing in recent encounters
+    const inactiveStaff = db.prepare("SELECT COUNT(*) as c FROM users WHERE is_active = 0").get().c;
+    if (inactiveStaff > 0) alerts.push({ severity: 'INFO', type: 'STAFF', title: `${inactiveStaff} Deactivated Staff Account${inactiveStaff > 1 ? 's' : ''}`, description: 'Staff accounts that have been suspended from the NPDMS system.', count: inactiveStaff });
+    // All clear
+    if (alerts.length === 0) alerts.push({ severity: 'OK', type: 'SYSTEM', title: 'All Systems Operational', description: 'No critical alerts. All facilities connected and operating normally.', count: 0 });
+    res.json({ alerts, generated_at: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/recent-logins — Activity monitor: recent login sessions
+app.get('/api/admin/recent-logins', (req, res) => {
+  try {
+    const logins = db.prepare(`
+      SELECT user_name, user_role, facility_id, ip_address, created_at, justification
+      FROM audit_logs
+      WHERE action IN ('USER_LOGIN', 'FAYDA_OTP_LOGIN')
+      ORDER BY created_at DESC
+      LIMIT 25
+    `).all();
+    res.json(logins);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/export/patients — CSV export of patient registry
+app.get('/api/admin/export/patients', (req, res) => {
+  try {
+    const patients = db.prepare(`
+      SELECT p.npdms_id, p.fayda_fin, p.fayda_status, p.first_name, p.father_name, p.grandfather_name,
+             p.date_of_birth, p.gender, p.phone_number, p.region, p.zone_woreda, p.blood_type,
+             f.name as registered_facility, p.created_at
+      FROM patients p LEFT JOIN facilities f ON p.created_facility_id = f.id
+      ORDER BY p.created_at DESC
+    `).all();
+    const headers = ['NPDMS ID','Fayda FIN','Fayda Status','First Name','Father Name','Grandfather Name','DOB','Gender','Phone','Region','Zone/Woreda','Blood Type','Registered Facility','Created At'];
+    const csvRows = [headers.join(',')];
+    patients.forEach(p => {
+      csvRows.push([p.npdms_id, p.fayda_fin||'', p.fayda_status, p.first_name, p.father_name, p.grandfather_name, p.date_of_birth, p.gender, p.phone_number||'', p.region, p.zone_woreda, p.blood_type||'', p.registered_facility||'', p.created_at].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+    });
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', 'SYS', null, 'EXPORT_CSV', 'PATIENT_REGISTRY', `Exported ${patients.length} patient records as CSV`);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="NPDMS_Patient_Registry_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csvRows.join('\n'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/export/audit — CSV export of audit trail
+app.get('/api/admin/export/audit', (req, res) => {
+  try {
+    const logs = db.prepare(`
+      SELECT id, user_id, user_name, user_role, facility_id, patient_id, action, resource_type, justification, ip_address, created_at
+      FROM audit_logs ORDER BY created_at DESC
+    `).all();
+    const headers = ['Audit ID','User ID','User Name','User Role','Facility','Patient ID','Action','Resource Type','Justification','IP Address','Timestamp'];
+    const csvRows = [headers.join(',')];
+    logs.forEach(l => {
+      csvRows.push([l.id, l.user_id, l.user_name, l.user_role, l.facility_id, l.patient_id||'', l.action, l.resource_type, l.justification||'', l.ip_address||'', l.created_at].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+    });
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', 'SYS', null, 'EXPORT_CSV', 'AUDIT_TRAIL', `Exported ${logs.length} audit log records as CSV`);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="NPDMS_Audit_Trail_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csvRows.join('\n'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/export/staff — CSV export of staff directory
+app.get('/api/admin/export/staff', (req, res) => {
+  try {
+    const users = db.prepare(`
+      SELECT u.id, u.username, u.full_name, u.role, u.professional_id, u.email, u.phone, u.is_active,
+             f.name as facility_name, f.code as facility_code
+      FROM users u LEFT JOIN facilities f ON u.facility_id = f.id
+      ORDER BY u.full_name ASC
+    `).all();
+    const headers = ['User ID','Username','Full Name','Role','Professional ID','Email','Phone','Active','Facility','Facility Code'];
+    const csvRows = [headers.join(',')];
+    users.forEach(u => {
+      csvRows.push([u.id, u.username, u.full_name, u.role, u.professional_id||'', u.email||'', u.phone||'', u.is_active ? 'Yes' : 'No', u.facility_name||'', u.facility_code||''].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+    });
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', 'SYS', null, 'EXPORT_CSV', 'STAFF_DIRECTORY', `Exported ${users.length} staff records as CSV`);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="NPDMS_Staff_Directory_${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csvRows.join('\n'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`=======================================================`);
