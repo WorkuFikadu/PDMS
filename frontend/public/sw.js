@@ -1,14 +1,12 @@
 // NPDMS Ethiopian National Health Spine – PWA Service Worker
 // Enables offline capability for rural health posts & emergency deployments
-const CACHE_VERSION = 'npdms-v2.4.0';
+const CACHE_VERSION = 'npdms-v2.5.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_QUEUE_KEY = 'npdms_offline_queue';
 
-// Core app shell files to cache for offline access
+// Core app shell files to cache for offline access (manifest only; HTML is network-first)
 const APP_SHELL = [
-  '/',
-  '/index.html',
   '/manifest.json'
 ];
 
@@ -24,36 +22,32 @@ const CACHEABLE_API_ROUTES = [
 // INSTALL: Cache app shell on service worker install
 // ─────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
-  console.log('[NPDMS-SW] Installing National Health Spine Service Worker...');
+  console.log('[NPDMS-SW] Installing National Health Spine Service Worker (v2.5.0)...');
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
-      console.log('[NPDMS-SW] Caching application shell for offline deployment');
-      return cache.addAll(APP_SHELL).catch(err => {
-        console.warn('[NPDMS-SW] Shell cache partial failure (acceptable):', err.message);
-      });
+      return cache.addAll(APP_SHELL).catch(() => {});
     })
   );
   self.skipWaiting();
 });
 
 // ─────────────────────────────────────────────────────────
-// ACTIVATE: Clean up old caches
+// ACTIVATE: Clean up all older caches immediately
 // ─────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('[NPDMS-SW] Activating — clearing stale caches');
+  console.log('[NPDMS-SW] Activating v2.5.0 — purging old caches');
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter(key => key.startsWith('npdms-') && key !== STATIC_CACHE && key !== API_CACHE)
+          .filter(key => key !== STATIC_CACHE && key !== API_CACHE)
           .map(key => {
-            console.log('[NPDMS-SW] Deleting old cache:', key);
+            console.log('[NPDMS-SW] Deleted legacy cache:', key);
             return caches.delete(key);
           })
       )
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // ─────────────────────────────────────────────────────────
@@ -69,25 +63,41 @@ self.addEventListener('fetch', (event) => {
   // Skip: Browser extension requests and non-HTTP
   if (!request.url.startsWith('http')) return;
 
-  // Strategy: API endpoints — Network First, Cache Fallback
+  // 1. Navigation & HTML: ALWAYS Network-First so updates show up immediately
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html' || request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match('/index.html').then(cached => cached || caches.match('/'));
+        })
+    );
+    return;
+  }
+
+  // 2. Strategy: API endpoints — Network First, Cache Fallback
   if (CACHEABLE_API_ROUTES.some(route => url.pathname.startsWith(route))) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          if (response && response.ok) {
             const clone = response.clone();
             caches.open(API_CACHE).then(cache => cache.put(request, clone));
           }
           return response;
         })
         .catch(() => {
-          console.log('[NPDMS-SW] Network failed for API, serving cached:', url.pathname);
           return caches.match(request).then(cached => {
             if (cached) return cached;
-            // Return structured offline response for API
             return new Response(JSON.stringify({
               offline: true,
-              message: 'NPDMS operating in offline mode. Showing locally cached data. Changes will sync when connectivity is restored.',
+              message: 'NPDMS operating in offline mode. Showing locally cached data.',
               cached_at: new Date().toISOString()
             }), {
               status: 200,
@@ -99,22 +109,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy: App shell & assets — Cache First, Network Fallback
-  if (url.pathname.match(/\.(js|css|woff2?|png|svg|ico|jpg|jpeg|webp)$/) || url.pathname === '/') {
+  // 3. Strategy: Static assets (JS/CSS/fonts/images) — Cache First, Network Fallback
+  if (url.pathname.match(/\.(js|css|woff2?|png|svg|ico|jpg|jpeg|webp)$/)) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
-          if (response.ok) {
+          if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
           }
           return response;
-        }).catch(() => {
-          // Return offline HTML shell for navigation requests
-          if (request.headers.get('accept')?.includes('text/html')) {
-            return caches.match('/index.html');
-          }
         });
       })
     );
@@ -122,11 +127,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // All other requests: Network only
-  event.respondWith(fetch(request).catch(() => {
-    if (request.headers.get('accept')?.includes('text/html')) {
-      return caches.match('/index.html');
-    }
-  }));
+  event.respondWith(fetch(request));
 });
 
 // ─────────────────────────────────────────────────────────

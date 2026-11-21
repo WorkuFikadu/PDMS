@@ -19,15 +19,70 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-slate-50 text-slate-800 antialiased selection:bg-sky-500 selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Instant Fallback Shell while React Bundles Load -->
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b1329; color: #f8fafc; text-align: center; padding: 24px;">
+        <div style="width: 52px; height: 52px; border-radius: 16px; background: #0284c7; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.4);">
+          <svg style="width: 28px; height: 28px; fill: none; stroke: white; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        </div>
+        <div style="font-weight: 800; font-size: 17px; letter-spacing: -0.02em; margin-bottom: 6px;">NPDMS · National Health Spine</div>
+        <div style="font-size: 12px; color: #94a3b8; max-width: 320px; line-height: 1.5; margin-bottom: 20px;">
+          Initializing secure clinical interface and connecting to Ethiopian Federal Ministry of Health spine...
+        </div>
+        <div style="width: 140px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; position: relative;">
+          <div style="position: absolute; top: 0; left: 0; height: 100%; width: 50%; background: #0284c7; border-radius: 99px; animation: npdmsLoad 1.2s infinite ease-in-out;"></div>
+        </div>
+        <style>
+          @keyframes npdmsLoad {
+            0% { left: -50%; width: 50%; }
+            50% { left: 25%; width: 60%; }
+            100% { left: 100%; width: 40%; }
+          }
+        </style>
+      </div>
+    </div>
+
+    <!-- Global Failsafe Error Handler -->
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('[NPDMS Global Error Trap]:', e);
+        var root = document.getElementById('root');
+        if (root && root.children.length <= 1) {
+          // If app didn't mount
+          var btn = document.getElementById('npdms-clear-cache-btn');
+          if (!btn) {
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #334155;border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:12px;color:white;font-size:12px;font-family:sans-serif;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);z-index:99999;';
+            box.innerHTML = '<span>Stale browser cache detected.</span><button id="npdms-clear-cache-btn" style="background:#0284c7;color:white;border:none;border-radius:8px;padding:6px 12px;font-weight:bold;cursor:pointer;">Update System</button>';
+            document.body.appendChild(box);
+            document.getElementById('npdms-clear-cache-btn').onclick = function() {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  for (var r of regs) r.unregister();
+                  if ('caches' in window) caches.keys().then(function(k) { k.forEach(function(c) { caches.delete(c); }); });
+                  window.location.reload(true);
+                });
+              } else {
+                window.location.reload(true);
+              }
+            };
+          }
+        }
+      });
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
+
     <!-- Register Service Worker for Offline / PWA Support -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then(reg => {
-              console.log('[NPDMS] Service Worker registered. Scope:', reg.scope);
+              console.log('[NPDMS] Service Worker active (v2.5.0)');
+              // Promptly check for updates
+              reg.update().catch(() => {});
+              
               // Listen for background sync messages
               navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data?.type === 'NPDMS_SYNC_REQUESTED') {
@@ -36,6 +91,16 @@
               });
             })
             .catch(err => console.warn('[NPDMS] Service Worker registration failed:', err));
+
+          // Reload when new service worker takes over
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+              refreshing = true;
+              console.log('[NPDMS] New Service Worker controlling page. Refreshing...');
+              window.location.reload();
+            }
+          });
         });
       }
     </script>
