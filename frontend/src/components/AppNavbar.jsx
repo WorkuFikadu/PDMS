@@ -1,10 +1,11 @@
 // frontend/src/components/AppNavbar.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PanelLeftClose, PanelLeft, Building2,
   ChevronDown, WifiOff, UploadCloud,
-  Search, X, LogOut, ShieldAlert
+  Search, X, LogOut, ShieldAlert, AlertOctagon
 } from 'lucide-react';
+import { apiFetch } from '../api';
 
 export default function AppNavbar({
   sidebarOpen, setSidebarOpen,
@@ -20,6 +21,27 @@ export default function AppNavbar({
   setActiveTab
 }) {
   const isAdminMode = activeTab === 'admin';
+  const [activeThreatCount, setActiveThreatCount] = useState(0);
+
+  // Periodically check for intercepted cyber threats
+  useEffect(() => {
+    let isMounted = true;
+    const checkThreats = async () => {
+      try {
+        const res = await apiFetch('/api/admin/security/overview');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setActiveThreatCount(data.threats_blocked_24h || 0);
+          }
+        }
+      } catch (_) {}
+    };
+
+    checkThreats();
+    const interval = setInterval(checkThreats, 20000);
+    return () => { isMounted = false; clearInterval(interval); };
+  }, []);
 
   return (
     <header className={`h-14 border-b z-30 flex items-center justify-between px-3 sm:px-5 shrink-0 shadow-sm transition-colors duration-300 ${
@@ -93,19 +115,27 @@ export default function AppNavbar({
       {/* ── RIGHT: Controls ── */}
       <div className="flex items-center gap-2 shrink-0">
 
-        {/* ── ADMIN GOVERNANCE PANEL BUTTON — always visible ── */}
+        {/* ── ADMIN GOVERNANCE PANEL BUTTON — always visible with Threat Surveillance ── */}
         <button
           onClick={() => setActiveTab && setActiveTab('admin')}
           title="Open Admin Governance Panel"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wide border transition cursor-pointer shrink-0 ${
+          className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wide border transition cursor-pointer shrink-0 ${
             isAdminMode
               ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-900/40'
+              : activeThreatCount > 0
+              ? 'bg-red-100 border-red-400 text-red-800 hover:bg-red-600 hover:text-white hover:border-red-600 shadow-sm animate-pulse'
               : 'bg-red-50 border-red-300 text-red-700 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-md hover:shadow-red-200'
           }`}
         >
           <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden sm:inline whitespace-nowrap">Admin Governance Panel</span>
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAdminMode ? 'bg-red-200 animate-pulse' : 'bg-red-400'}`} />
+          {activeThreatCount > 0 ? (
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-black bg-red-600 text-white border border-white shadow-xs">
+              {activeThreatCount} ALERT{activeThreatCount > 1 ? 'S' : ''}
+            </span>
+          ) : (
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAdminMode ? 'bg-red-200 animate-pulse' : 'bg-red-400'}`} />
+          )}
         </button>
 
         {/* Live Spine Status */}
