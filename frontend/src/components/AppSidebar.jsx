@@ -5,7 +5,7 @@ import {
   Share2, Calendar, Baby, Pill, FlaskConical, ShieldAlert,
   Shield, BarChart3, FileText, WifiOff, Wifi, Plus, ChevronRight, Network, Droplets, Settings, UserCheck
 } from 'lucide-react';
-import { hasPermission } from '../App';
+import { hasPermission } from '../rbac';
 
 export default function AppSidebar({
   activeTab, setActiveTab,
